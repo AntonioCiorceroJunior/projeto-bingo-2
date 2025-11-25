@@ -1,0 +1,75 @@
+<Window x:Class="BingoAdmin.UI.Views.PedraMaiorWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="Desempate - Pedra Maior" Height="450" Width="600" WindowStartupLocation="CenterScreen" Background="#1E1E1E">
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+    </Window.Resources>
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock x:Name="TitleText" Text="MÚLTIPLOS GANHADORES" Foreground="White" FontSize="18" FontWeight="Bold" Margin="0,0,0,20"/>
+
+        <DataGrid x:Name="GridGanhadores" Grid.Row="1" AutoGenerateColumns="False" CanUserAddRows="False" 
+                  Background="#1E1E1E" RowBackground="#1E1E1E" Foreground="White" BorderBrush="Gray"
+                  HeadersVisibility="Column" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="Gray">
+            <DataGrid.Resources>
+                <Style TargetType="DataGridColumnHeader">
+                    <Setter Property="Background" Value="#1E1E1E"/>
+                    <Setter Property="Foreground" Value="White"/>
+                    <Setter Property="Padding" Value="5"/>
+                    <Setter Property="BorderBrush" Value="Gray"/>
+                    <Setter Property="BorderThickness" Value="0,0,0,1"/>
+                </Style>
+                <Style TargetType="DataGridCell">
+                    <Setter Property="Padding" Value="5"/>
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="DataGridCell">
+                                <Border Padding="{TemplateBinding Padding}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}" SnapsToDevicePixels="True">
+                                    <ContentPresenter SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
+                                </Border>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsWinner}" Value="True">
+                            <Setter Property="Foreground" Value="#FF4444"/>
+                            <Setter Property="FontWeight" Value="Bold"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </DataGrid.Resources>
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Nome" Binding="{Binding Nome}" Width="*"/>
+                <DataGridTextColumn Header="Combo" Binding="{Binding ComboNumero}" Width="80"/>
+                <DataGridTextColumn Header="Cartela" Binding="{Binding NumeroCartela}" Width="80"/>
+                <DataGridTextColumn Header="Pedra" Binding="{Binding PedraSorteada}" Width="80"/>
+                <DataGridTemplateColumn Width="120">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="&lt;- GANHADORA" Foreground="Gray" Visibility="{Binding IsWinner, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <StackPanel Grid.Row="2" Margin="0,20,0,0">
+            <CheckBox x:Name="ChkModoSuspense" Content="Modo Suspense (Sorteio Lento)" Foreground="White" Margin="0,0,0,10" IsChecked="True"/>
+            <TextBlock x:Name="TxtResultado" Text="" Foreground="White" FontSize="16" FontWeight="Bold" Margin="0,0,0,10"/>
+            <Button x:Name="BtnSortear" Content="(Sortear Pedra Maior)" Click="BtnSortear_Click" 
+                    Background="Transparent" Foreground="White" BorderThickness="0" FontSize="16" HorizontalAlignment="Left" Cursor="Hand"/>
+            <Button x:Name="BtnFechar" Content="(Fechar)" Click="BtnFechar_Click" Visibility="Collapsed"
+                    Background="Transparent" Foreground="White" BorderThickness="0" FontSize="16" HorizontalAlignment="Left" Cursor="Hand"/>
+        </StackPanel>
+    </Grid>
+</Window>

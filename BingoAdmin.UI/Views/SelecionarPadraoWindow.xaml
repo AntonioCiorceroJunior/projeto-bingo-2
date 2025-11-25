@@ -1,0 +1,21 @@
+<Window x:Class="BingoAdmin.UI.Views.SelecionarPadraoWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Selecionar Padrão da Rodada Extra" Height="250" Width="400" WindowStartupLocation="CenterScreen">
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Text="Escolha o padrão para a Rodada Extra:" FontSize="16" FontWeight="Bold" Margin="0,0,0,10"/>
+
+        <ComboBox x:Name="CmbPadroes" Grid.Row="1" DisplayMemberPath="Nome" VerticalAlignment="Top" Height="30"/>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
+            <Button x:Name="BtnCancelar" Content="Cancelar" Width="100" Height="30" Margin="0,0,10,0" Click="BtnCancelar_Click"/>
+            <Button x:Name="BtnConfirmar" Content="Confirmar" Width="100" Height="30" Click="BtnConfirmar_Click" Background="#007ACC" Foreground="White"/>
+        </StackPanel>
+    </Grid>
+</Window>

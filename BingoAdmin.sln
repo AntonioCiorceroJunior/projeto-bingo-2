@@ -1,0 +1,34 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BingoAdmin.Domain", "BingoAdmin.Domain\BingoAdmin.Domain.csproj", "{E3A3B2E4-8E7A-4FC0-8B3F-198E12CF685D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BingoAdmin.Infra", "BingoAdmin.Infra\BingoAdmin.Infra.csproj", "{A79681A4-A202-4B9F-BF07-FBE3A1F02F70}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BingoAdmin.UI", "BingoAdmin.UI\BingoAdmin.UI.csproj", "{6D2AEA6B-EAD4-4BEC-ABB8-95ECF33676ED}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{E3A3B2E4-8E7A-4FC0-8B3F-198E12CF685D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E3A3B2E4-8E7A-4FC0-8B3F-198E12CF685D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E3A3B2E4-8E7A-4FC0-8B3F-198E12CF685D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E3A3B2E4-8E7A-4FC0-8B3F-198E12CF685D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A79681A4-A202-4B9F-BF07-FBE3A1F02F70}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A79681A4-A202-4B9F-BF07-FBE3A1F02F70}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A79681A4-A202-4B9F-BF07-FBE3A1F02F70}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A79681A4-A202-4B9F-BF07-FBE3A1F02F70}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6D2AEA6B-EAD4-4BEC-ABB8-95ECF33676ED}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6D2AEA6B-EAD4-4BEC-ABB8-95ECF33676ED}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6D2AEA6B-EAD4-4BEC-ABB8-95ECF33676ED}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6D2AEA6B-EAD4-4BEC-ABB8-95ECF33676ED}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
