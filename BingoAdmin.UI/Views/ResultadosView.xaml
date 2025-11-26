@@ -1,0 +1,41 @@
+<UserControl x:Class="BingoAdmin.UI.Views.ResultadosView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="800">
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,20">
+            <TextBlock Text="Bingo:" VerticalAlignment="Center" Margin="0,0,10,0" FontWeight="Bold"/>
+            <ComboBox x:Name="BingoSelector" Width="200" DisplayMemberPath="Nome" SelectionChanged="BingoSelector_SelectionChanged"/>
+            <Button Content="Atualizar" Click="BtnAtualizar_Click" Margin="10,0,0,0" Padding="10,5"/>
+        </StackPanel>
+
+        <DataGrid x:Name="GridResultados" Grid.Row="1" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Rodada" Binding="{Binding RodadaDescricao}" Width="200"/>
+                <DataGridTextColumn Header="Prêmio" Binding="{Binding TipoPremio}" Width="150"/>
+                <DataGridTextColumn Header="Ganhador" Binding="{Binding NomeGanhador}" Width="*"/>
+                <DataGridTextColumn Header="Combo" Binding="{Binding ComboNumero}" Width="80"/>
+                <DataGridTextColumn Header="Cartela" Binding="{Binding CartelaNumero}" Width="80"/>
+            </DataGrid.Columns>
+            <DataGrid.GroupStyle>
+                <GroupStyle>
+                    <GroupStyle.HeaderTemplate>
+                        <DataTemplate>
+                            <StackPanel>
+                                <TextBlock Text="{Binding Name}" FontWeight="Bold" Padding="5" Background="LightGray"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </GroupStyle.HeaderTemplate>
+                </GroupStyle>
+            </DataGrid.GroupStyle>
+        </DataGrid>
+    </Grid>
+</UserControl>

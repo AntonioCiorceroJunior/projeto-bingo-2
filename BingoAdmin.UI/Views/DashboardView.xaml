@@ -39,6 +39,15 @@
             <TabItem Header="Desempate">
                 <local:DesempateView/>
             </TabItem>
+            <TabItem Header="Financeiro">
+                <local:FinanceiroView/>
+            </TabItem>
+            <TabItem Header="Resultados (Transparência)">
+                <local:ResultadosView/>
+            </TabItem>
+            <TabItem Header="Mini Games">
+                <local:MiniGamesView/>
+            </TabItem>
             <TabItem Header="Relatórios">
                 <local:RelatoriosView/>
             </TabItem>

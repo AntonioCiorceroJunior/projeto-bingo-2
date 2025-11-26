@@ -15,6 +15,7 @@ namespace BingoAdmin.Infra.Data
         public DbSet<Ganhador> Ganhadores { get; set; }
         public DbSet<PedraMaiorSorteio> PedraMaiorSorteios { get; set; }
         public DbSet<DesempateItem> DesempateItens { get; set; }
+        public DbSet<Despesa> Despesas { get; set; }
 
         public BingoContext() { }
 
