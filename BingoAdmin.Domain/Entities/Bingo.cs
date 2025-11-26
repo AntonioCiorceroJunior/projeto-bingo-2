@@ -11,6 +11,7 @@ namespace BingoAdmin.Domain.Entities
         public int QuantidadeCombos { get; set; }
         public int CartelasPorCombo { get; set; }
         public int QuantidadeRodadas { get; set; } // Nova propriedade
+        public decimal ValorPorCombo { get; set; } // Novo campo para financeiro
         public string Status { get; set; } = "Rascunho"; // Rascunho, Ativo, Finalizado
         public int UsuarioCriadorId { get; set; }
         public Usuario? UsuarioCriador { get; set; }

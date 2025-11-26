@@ -102,5 +102,52 @@ namespace BingoAdmin.UI.Services
             })
             .GeneratePdf(filePath);
         }
+
+        public List<ResultadoGeralDto> GetResultadosGerais(int bingoId)
+        {
+            var resultados = new List<ResultadoGeralDto>();
+
+            var rodadas = _context.Rodadas
+                .Where(r => r.BingoId == bingoId)
+                .OrderBy(r => r.NumeroOrdem)
+                .ToList();
+
+            foreach (var rodada in rodadas)
+            {
+                var ganhadores = _context.Ganhadores
+                    .Where(g => g.RodadaId == rodada.Id)
+                    .ToList();
+
+                foreach (var g in ganhadores)
+                {
+                    var cartela = _context.Cartelas
+                        .Include(c => c.Combo)
+                        .FirstOrDefault(c => c.Id == g.CartelaId);
+
+                    if (cartela != null)
+                    {
+                        resultados.Add(new ResultadoGeralDto
+                        {
+                            RodadaDescricao = $"{rodada.NumeroOrdem}ª Rodada - {rodada.Descricao}",
+                            TipoPremio = rodada.TipoPremio,
+                            NomeGanhador = cartela.Combo?.NomeDono ?? "Desconhecido",
+                            ComboNumero = cartela.Combo?.NumeroCombo ?? 0,
+                            CartelaNumero = cartela.NumeroCartelaNoCombo
+                        });
+                    }
+                }
+            }
+
+            return resultados;
+        }
+    }
+
+    public class ResultadoGeralDto
+    {
+        public string RodadaDescricao { get; set; } = string.Empty;
+        public string TipoPremio { get; set; } = string.Empty;
+        public string NomeGanhador { get; set; } = string.Empty;
+        public int ComboNumero { get; set; }
+        public int CartelaNumero { get; set; }
     }
 }
