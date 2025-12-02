@@ -75,5 +75,10 @@ namespace BingoAdmin.UI.Services
                 _context.SaveChanges();
             }
         }
+
+        public List<Padrao> ListarTodos()
+        {
+            return _context.Padroes.ToList();
+        }
     }
 }

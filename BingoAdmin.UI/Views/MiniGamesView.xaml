@@ -5,8 +5,9 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              mc:Ignorable="d" 
              d:DesignHeight="600" d:DesignWidth="900">
-    <Grid Margin="20">
-        <TabControl>
+    <Border Margin="20" Background="{DynamicResource CardBackgroundBrush}" CornerRadius="{DynamicResource ControlCornerRadius}" Effect="{DynamicResource DropShadowEffect}" Padding="20">
+        <Grid>
+            <TabControl>
             <!-- Jogo do Bicho -->
             <TabItem Header="Jogo do Bicho">
                 <Grid>
@@ -22,7 +23,7 @@
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,10" VerticalAlignment="Center">
                             <TextBlock Text="Quantidade de Bichos (25-50):" VerticalAlignment="Center" FontWeight="Bold"/>
                             <TextBox x:Name="TxtQtdBichos" Width="60" Margin="10,0" Text="25" VerticalContentAlignment="Center" Padding="2"/>
-                            <Button Content="GERAR JOGO" Click="BtnGerarBicho_Click" Padding="15,5" Background="#007ACC" Foreground="White"/>
+                            <Button Content="GERAR JOGO" Click="BtnGerarBicho_Click" Padding="15,5" Style="{DynamicResource PrimaryButtonStyle}"/>
                         </StackPanel>
 
                         <!-- Lista de Bichos -->
@@ -86,7 +87,7 @@
 
                         <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,20,0,0">
                             <Button Content="VOLTAR" Click="BtnVoltarBicho_Click" Padding="20,10" Margin="0,0,20,0" Background="Gray" Foreground="White"/>
-                            <Button x:Name="BtnRealizarSorteioBicho" Content="INICIAR SORTEIO" Click="BtnRealizarSorteioBicho_Click" Padding="20,10" FontSize="16" Background="#007ACC" Foreground="White"/>
+                            <Button x:Name="BtnRealizarSorteioBicho" Content="INICIAR SORTEIO" Click="BtnRealizarSorteioBicho_Click" Padding="20,10" FontSize="16" Background="#5DADE2" Foreground="White"/>
                         </StackPanel>
                     </Grid>
                 </Grid>
@@ -114,7 +115,7 @@
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                 <TextBlock Text="Qtd. Participantes:" VerticalAlignment="Center" FontWeight="Bold"/>
                                 <TextBox x:Name="TxtQtdNomes" Width="60" Margin="10,0" Text="50" VerticalContentAlignment="Center" Padding="2"/>
-                                <Button Content="GERAR JOGO" Click="BtnGerarNomes_Click" Padding="15,5" Background="#007ACC" Foreground="White"/>
+                                <Button Content="GERAR JOGO" Click="BtnGerarNomes_Click" Padding="15,5" Background="#5DADE2" Foreground="White"/>
                             </StackPanel>
 
                             <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
@@ -184,11 +185,12 @@
 
                         <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,20,0,0">
                             <Button Content="VOLTAR" Click="BtnVoltarNomes_Click" Padding="20,10" Margin="0,0,20,0" Background="Gray" Foreground="White"/>
-                            <Button x:Name="BtnRealizarSorteioNomes" Content="INICIAR SORTEIO" Click="BtnRealizarSorteioNomes_Click" Padding="20,10" FontSize="16" Background="#007ACC" Foreground="White"/>
+                            <Button x:Name="BtnRealizarSorteioNomes" Content="INICIAR SORTEIO" Click="BtnRealizarSorteioNomes_Click" Padding="20,10" FontSize="16" Background="#5DADE2" Foreground="White"/>
                         </StackPanel>
                     </Grid>
                 </Grid>
             </TabItem>
         </TabControl>
-    </Grid>
+        </Grid>
+    </Border>
 </UserControl>

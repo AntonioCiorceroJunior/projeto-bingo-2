@@ -15,6 +15,7 @@ namespace BingoAdmin.UI.Views
     {
         private readonly ComboService _comboService;
         private readonly PdfService _pdfService;
+        private readonly BingoContextService _bingoContext;
         private readonly HashSet<int> _unlockedCombos = new HashSet<int>();
         
         private List<Combo> _allCombos = new();
@@ -27,14 +28,39 @@ namespace BingoAdmin.UI.Views
 
             _comboService = ((App)Application.Current).Host.Services.GetRequiredService<ComboService>();
             _pdfService = ((App)Application.Current).Host.Services.GetRequiredService<PdfService>();
+            _bingoContext = ((App)Application.Current).Host.Services.GetRequiredService<BingoContextService>();
 
             LoadBingos();
+            _bingoContext.OnBingoChanged += OnGlobalBingoChanged;
+        }
+
+        private void OnGlobalBingoChanged(int bingoId)
+        {
+            if (BingoSelector.SelectedItem is Bingo current && current.Id == bingoId) return;
+
+            var bingos = BingoSelector.ItemsSource as List<Bingo>;
+            var target = bingos?.FirstOrDefault(b => b.Id == bingoId);
+            if (target != null)
+            {
+                BingoSelector.SelectedItem = target;
+            }
         }
 
         private void LoadBingos()
         {
             var bingos = _comboService.GetBingos();
             BingoSelector.ItemsSource = bingos;
+
+            if (_bingoContext.CurrentBingoId != -1)
+            {
+                var target = bingos.FirstOrDefault(b => b.Id == _bingoContext.CurrentBingoId);
+                if (target != null)
+                {
+                    BingoSelector.SelectedItem = target;
+                    return;
+                }
+            }
+
             if (bingos.Count > 0)
             {
                 BingoSelector.SelectedIndex = 0;
@@ -43,12 +69,24 @@ namespace BingoAdmin.UI.Views
 
         private void BingoSelector_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            LoadCombos();
+            if (BingoSelector.SelectedItem is Bingo selectedBingo)
+            {
+                _bingoContext.SetCurrentBingo(selectedBingo.Id);
+                LoadCombos();
+            }
         }
 
         private void RefreshButton_Click(object sender, RoutedEventArgs e)
         {
-            LoadCombos();
+            // Recarrega a lista de bingos (para pegar novos criados)
+            LoadBingos();
+            
+            // Se a seleção não mudou (manteve o mesmo ID), forçamos o recarregamento dos combos
+            // pois o SelectionChanged pode não disparar se o objeto for considerado "igual" ou se restaurarmos a seleção rapidamente
+            if (BingoSelector.SelectedItem != null)
+            {
+                LoadCombos();
+            }
         }
 
         private void LoadCombos()

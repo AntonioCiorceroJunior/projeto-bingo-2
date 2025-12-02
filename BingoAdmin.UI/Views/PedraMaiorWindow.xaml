@@ -4,7 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
-        Title="Desempate - Pedra Maior" Height="450" Width="600" WindowStartupLocation="CenterScreen" Background="#1E1E1E">
+        Title="Desempate - Pedra Maior" Height="450" Width="600" WindowStartupLocation="CenterScreen" Background="#F5F5F5">
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
     </Window.Resources>
@@ -16,20 +16,26 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <TextBlock x:Name="TitleText" Text="MÚLTIPLOS GANHADORES" Foreground="White" FontSize="18" FontWeight="Bold" Margin="0,0,0,20"/>
+        <TextBlock x:Name="TitleText" Text="MÚLTIPLOS GANHADORES" Foreground="#333333" FontSize="18" FontWeight="Bold" Margin="0,0,0,20"/>
 
-        <DataGrid x:Name="GridGanhadores" Grid.Row="1" AutoGenerateColumns="False" CanUserAddRows="False" 
-                  Background="#1E1E1E" RowBackground="#1E1E1E" Foreground="White" BorderBrush="Gray"
-                  HeadersVisibility="Column" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="Gray">
+        <DataGrid x:Name="GridGanhadores" Grid.Row="1" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True"
+                  Background="White" RowBackground="White" Foreground="Black" BorderBrush="#CCCCCC"
+                  HeadersVisibility="Column" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E0E0E0">
             <DataGrid.Resources>
+                <Style TargetType="DataGridRow">
+                    <Setter Property="Background" Value="White"/>
+                    <Setter Property="Foreground" Value="Black"/>
+                </Style>
                 <Style TargetType="DataGridColumnHeader">
-                    <Setter Property="Background" Value="#1E1E1E"/>
-                    <Setter Property="Foreground" Value="White"/>
-                    <Setter Property="Padding" Value="5"/>
-                    <Setter Property="BorderBrush" Value="Gray"/>
-                    <Setter Property="BorderThickness" Value="0,0,0,1"/>
+                    <Setter Property="Background" Value="#E0E0E0"/>
+                    <Setter Property="Foreground" Value="Black"/>
+                    <Setter Property="Padding" Value="10,5"/>
+                    <Setter Property="BorderBrush" Value="#CCCCCC"/>
+                    <Setter Property="BorderThickness" Value="0,0,1,1"/>
+                    <Setter Property="FontWeight" Value="Bold"/>
                 </Style>
                 <Style TargetType="DataGridCell">
+                    <Setter Property="Foreground" Value="Black"/>
                     <Setter Property="Padding" Value="5"/>
                     <Setter Property="Template">
                         <Setter.Value>
@@ -42,7 +48,7 @@
                     </Setter>
                     <Style.Triggers>
                         <DataTrigger Binding="{Binding IsWinner}" Value="True">
-                            <Setter Property="Foreground" Value="#FF4444"/>
+                            <Setter Property="Foreground" Value="#D32F2F"/>
                             <Setter Property="FontWeight" Value="Bold"/>
                         </DataTrigger>
                     </Style.Triggers>
@@ -52,6 +58,7 @@
                 <DataGridTextColumn Header="Nome" Binding="{Binding Nome}" Width="*"/>
                 <DataGridTextColumn Header="Combo" Binding="{Binding ComboNumero}" Width="80"/>
                 <DataGridTextColumn Header="Cartela" Binding="{Binding NumeroCartela}" Width="80"/>
+                <DataGridTextColumn Header="Padrão" Binding="{Binding NomePadrao}" Width="100"/>
                 <DataGridTextColumn Header="Pedra" Binding="{Binding PedraSorteada}" Width="80"/>
                 <DataGridTemplateColumn Width="120">
                     <DataGridTemplateColumn.CellTemplate>
@@ -64,12 +71,24 @@
         </DataGrid>
 
         <StackPanel Grid.Row="2" Margin="0,20,0,0">
-            <CheckBox x:Name="ChkModoSuspense" Content="Modo Suspense (Sorteio Lento)" Foreground="White" Margin="0,0,0,10" IsChecked="True"/>
-            <TextBlock x:Name="TxtResultado" Text="" Foreground="White" FontSize="16" FontWeight="Bold" Margin="0,0,0,10"/>
-            <Button x:Name="BtnSortear" Content="(Sortear Pedra Maior)" Click="BtnSortear_Click" 
-                    Background="Transparent" Foreground="White" BorderThickness="0" FontSize="16" HorizontalAlignment="Left" Cursor="Hand"/>
-            <Button x:Name="BtnFechar" Content="(Fechar)" Click="BtnFechar_Click" Visibility="Collapsed"
-                    Background="Transparent" Foreground="White" BorderThickness="0" FontSize="16" HorizontalAlignment="Left" Cursor="Hand"/>
+            <CheckBox x:Name="ChkModoSuspense" Content="Modo Suspense (Sorteio Lento)" Foreground="Black" Margin="0,0,0,10" IsChecked="True"/>
+            <TextBlock x:Name="TxtResultado" Text="" Foreground="Black" FontSize="16" FontWeight="Bold" Margin="0,0,0,10"/>
+            <Button x:Name="BtnSortear" Content="Sortear Pedra Maior" Click="BtnSortear_Click" 
+                    Background="#5DADE2" Foreground="White" Padding="15,8" BorderThickness="0" FontSize="16" HorizontalAlignment="Left" Cursor="Hand">
+                <Button.Resources>
+                    <Style TargetType="Border">
+                        <Setter Property="CornerRadius" Value="5"/>
+                    </Style>
+                </Button.Resources>
+            </Button>
+            <Button x:Name="BtnFechar" Content="Fechar" Click="BtnFechar_Click" Visibility="Collapsed"
+                    Background="#95A5A6" Foreground="White" Padding="15,8" BorderThickness="0" FontSize="16" HorizontalAlignment="Left" Cursor="Hand">
+                <Button.Resources>
+                    <Style TargetType="Border">
+                        <Setter Property="CornerRadius" Value="5"/>
+                    </Style>
+                </Button.Resources>
+            </Button>
         </StackPanel>
     </Grid>
 </Window>

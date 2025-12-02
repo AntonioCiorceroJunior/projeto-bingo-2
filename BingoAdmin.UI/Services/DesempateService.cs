@@ -10,11 +10,13 @@ namespace BingoAdmin.UI.Services
     public class DesempateService
     {
         private readonly BingoContext _context;
+        private readonly FeedService _feedService;
         private Random _random = new Random();
 
-        public DesempateService(BingoContext context)
+        public DesempateService(BingoContext context, FeedService feedService)
         {
             _context = context;
+            _feedService = feedService;
         }
 
         public List<Ganhador> GetGanhadoresDaRodada(int rodadaId)
@@ -55,6 +57,8 @@ namespace BingoAdmin.UI.Services
 
             _context.PedraMaiorSorteios.Add(sorteio);
             _context.SaveChanges();
+
+            _feedService.AddMessage("Pedra Maior", $"Sorteio: {numero} (Ganhador ID: {ganhadorId})", "Info");
 
             return numero;
         }

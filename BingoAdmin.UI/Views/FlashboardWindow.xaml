@@ -1,0 +1,197 @@
+<Window x:Class="BingoAdmin.UI.Views.FlashboardWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:BingoAdmin.UI.Views"
+        mc:Ignorable="d"
+        Title="Bingo Flashboard" Height="768" Width="1024" WindowStartupLocation="CenterScreen" Background="Black">
+    <Window.Resources>
+        <Style TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="Foreground" Value="White"/>
+        </Style>
+        
+        <!-- Style for Board Numbers -->
+        <Style x:Key="BoardNumberStyle" TargetType="Border">
+            <Setter Property="Background" Value="#222"/>
+            <Setter Property="Margin" Value="2"/>
+            <Setter Property="CornerRadius" Value="5"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsDrawn}" Value="True">
+                    <Setter Property="Background" Value="#00FF00"/> <!-- Bright Green for drawn -->
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        
+        <Style x:Key="BoardTextStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="24"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Foreground" Value="#555"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsDrawn}" Value="True">
+                    <Setter Property="Foreground" Value="Black"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="20">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/> <!-- Left: Board -->
+            <ColumnDefinition Width="350"/> <!-- Right: Current Number & Pattern -->
+        </Grid.ColumnDefinitions>
+
+        <!-- Left Side: The Full Board -->
+        <Grid Grid.Column="0" Margin="0,0,20,0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/> <!-- Header B I N G O -->
+                <RowDefinition Height="*"/>    <!-- Numbers -->
+            </Grid.RowDefinitions>
+
+            <!-- B I N G O Headers -->
+            <UniformGrid Rows="1" Columns="5" Margin="0,0,0,10">
+                <Border Background="{DynamicResource HeaderBackgroundBrush}" Margin="2" CornerRadius="5"><TextBlock Text="B" FontSize="40" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="White"/></Border>
+                <Border Background="{DynamicResource HeaderBackgroundBrush}" Margin="2" CornerRadius="5"><TextBlock Text="I" FontSize="40" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="White"/></Border>
+                <Border Background="{DynamicResource HeaderBackgroundBrush}" Margin="2" CornerRadius="5"><TextBlock Text="N" FontSize="40" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="White"/></Border>
+                <Border Background="{DynamicResource HeaderBackgroundBrush}" Margin="2" CornerRadius="5"><TextBlock Text="G" FontSize="40" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="White"/></Border>
+                <Border Background="{DynamicResource HeaderBackgroundBrush}" Margin="2" CornerRadius="5"><TextBlock Text="O" FontSize="40" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="White"/></Border>
+            </UniformGrid>
+
+            <!-- Numbers Grid -->
+            <Grid Grid.Row="1">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <ItemsControl Grid.Column="0" ItemsSource="{Binding ColumnB}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <UniformGrid Rows="15" Columns="1"/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Style="{StaticResource BoardNumberStyle}">
+                                <Viewbox>
+                                    <TextBlock Text="{Binding Numero}" Style="{StaticResource BoardTextStyle}" Margin="5"/>
+                                </Viewbox>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <ItemsControl Grid.Column="1" ItemsSource="{Binding ColumnI}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <UniformGrid Rows="15" Columns="1"/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Style="{StaticResource BoardNumberStyle}">
+                                <Viewbox>
+                                    <TextBlock Text="{Binding Numero}" Style="{StaticResource BoardTextStyle}" Margin="5"/>
+                                </Viewbox>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <ItemsControl Grid.Column="2" ItemsSource="{Binding ColumnN}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <UniformGrid Rows="15" Columns="1"/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Style="{StaticResource BoardNumberStyle}">
+                                <Viewbox>
+                                    <TextBlock Text="{Binding Numero}" Style="{StaticResource BoardTextStyle}" Margin="5"/>
+                                </Viewbox>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <ItemsControl Grid.Column="3" ItemsSource="{Binding ColumnG}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <UniformGrid Rows="15" Columns="1"/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Style="{StaticResource BoardNumberStyle}">
+                                <Viewbox>
+                                    <TextBlock Text="{Binding Numero}" Style="{StaticResource BoardTextStyle}" Margin="5"/>
+                                </Viewbox>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <ItemsControl Grid.Column="4" ItemsSource="{Binding ColumnO}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <UniformGrid Rows="15" Columns="1"/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Style="{StaticResource BoardNumberStyle}">
+                                <Viewbox>
+                                    <TextBlock Text="{Binding Numero}" Style="{StaticResource BoardTextStyle}" Margin="5"/>
+                                </Viewbox>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </Grid>
+        </Grid>
+
+        <!-- Right Side: Current Number & Info -->
+        <Grid Grid.Column="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/> <!-- Current Number -->
+                <RowDefinition Height="*"/>    <!-- Pattern -->
+                <RowDefinition Height="Auto"/> <!-- Marquee/Message -->
+            </Grid.RowDefinitions>
+
+            <!-- Current Number Display -->
+            <Border Grid.Row="0" Background="#111" BorderBrush="{DynamicResource PrimaryBrush}" BorderThickness="5" CornerRadius="20" Height="300" Margin="0,0,0,20">
+                <Viewbox>
+                    <StackPanel>
+                        <TextBlock Text="ÚLTIMO" Foreground="Gray" HorizontalAlignment="Center" Margin="0,10,0,0"/>
+                        <TextBlock x:Name="TxtCurrentNumber" Text="--" FontWeight="Bold" Foreground="{DynamicResource PrimaryBrush}" HorizontalAlignment="Center"/>
+                    </StackPanel>
+                </Viewbox>
+            </Border>
+
+            <!-- Pattern Display -->
+            <Border Grid.Row="1" Background="#222" CornerRadius="10" Padding="10">
+                <StackPanel>
+                    <TextBlock Text="PADRÃO ATUAL" HorizontalAlignment="Center" FontSize="20" FontWeight="Bold" Margin="0,0,0,10"/>
+                    <TextBlock x:Name="TxtPatternName" Text="Nenhum" HorizontalAlignment="Center" FontSize="16" Foreground="#AAA" Margin="0,0,0,10"/>
+                    
+                    <!-- Visual Grid for Pattern (5x5) -->
+                    <UniformGrid x:Name="PatternGrid" Rows="5" Columns="5" Width="200" Height="200" HorizontalAlignment="Center">
+                        <!-- Will be populated in code-behind -->
+                    </UniformGrid>
+                </StackPanel>
+            </Border>
+            
+            <!-- Marquee Placeholder -->
+            <Border Grid.Row="2" Background="#333" Margin="0,20,0,0" Padding="10" CornerRadius="5">
+                <TextBlock Text="BOA SORTE A TODOS!" FontSize="20" FontWeight="Bold" Foreground="Yellow" HorizontalAlignment="Center"/>
+            </Border>
+        </Grid>
+    </Grid>
+</Window>

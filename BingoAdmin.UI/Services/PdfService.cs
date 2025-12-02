@@ -74,7 +74,7 @@ namespace BingoAdmin.UI.Services
 
         private void RenderCartela(IContainer container, Cartela cartela, int comboNumero, string nomeDono)
         {
-            var blueColor = "#007ACC";
+            var blueColor = "#5DADE2";
             var grayColor = "#CCCCCC";
 
             container

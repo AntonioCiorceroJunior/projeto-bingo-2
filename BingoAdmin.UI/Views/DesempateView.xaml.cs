@@ -14,6 +14,7 @@ namespace BingoAdmin.UI.Views
         private readonly ComboService _comboService;
         private readonly RodadaService _rodadaService;
         private readonly GameService _gameService;
+        private readonly BingoContextService _bingoContext;
 
         public DesempateView()
         {
@@ -25,10 +26,24 @@ namespace BingoAdmin.UI.Views
             _comboService = services.GetRequiredService<ComboService>();
             _rodadaService = services.GetRequiredService<RodadaService>();
             _gameService = services.GetRequiredService<GameService>();
+            _bingoContext = services.GetRequiredService<BingoContextService>();
 
             _gameService.OnGanhadoresEncontrados += OnGanhadoresEncontrados;
 
             LoadBingos();
+            _bingoContext.OnBingoChanged += OnGlobalBingoChanged;
+        }
+
+        private void OnGlobalBingoChanged(int bingoId)
+        {
+            if (BingoSelector.SelectedItem is Bingo current && current.Id == bingoId) return;
+
+            var bingos = BingoSelector.ItemsSource as System.Collections.Generic.List<Bingo>;
+            var target = System.Linq.Enumerable.FirstOrDefault(bingos, b => b.Id == bingoId);
+            if (target != null)
+            {
+                BingoSelector.SelectedItem = target;
+            }
         }
 
         private void OnGanhadoresEncontrados(System.Collections.Generic.List<GanhadorInfo> ganhadores)
@@ -46,13 +61,29 @@ namespace BingoAdmin.UI.Views
 
         private void LoadBingos()
         {
-            BingoSelector.ItemsSource = _comboService.GetBingos();
+            var bingos = _comboService.GetBingos();
+            BingoSelector.ItemsSource = bingos;
+            
+            if (_bingoContext.CurrentBingoId != -1)
+            {
+                var target = System.Linq.Enumerable.FirstOrDefault(bingos, b => b.Id == _bingoContext.CurrentBingoId);
+                if (target != null)
+                {
+                    BingoSelector.SelectedItem = target;
+                    return;
+                }
+            }
+
             if (BingoSelector.Items.Count > 0) BingoSelector.SelectedIndex = 0;
         }
 
         private void BingoSelector_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            LoadDesempates();
+            if (BingoSelector.SelectedItem is Bingo selectedBingo)
+            {
+                _bingoContext.SetCurrentBingo(selectedBingo.Id);
+                LoadDesempates();
+            }
         }
 
         private void LoadDesempates()
@@ -143,7 +174,6 @@ namespace BingoAdmin.UI.Views
         
         public string DisplayText => $"{Nome} | combo {Combo} | cartela {CartelaNumero} | numero pedra maior = {PedraMaior ?? 0}";
         public FontWeight FontWeight => IsGanhador ? FontWeights.Bold : FontWeights.Normal;
-        public System.Windows.Media.Brush Foreground => IsGanhador ? System.Windows.Media.Brushes.Green : System.Windows.Media.Brushes.Black;
         public string GanhadorLabel => IsGanhador ? " < - Ganhador" : "";
     }
 }

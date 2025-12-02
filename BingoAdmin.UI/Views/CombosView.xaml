@@ -11,27 +11,38 @@
     </UserControl.Resources>
 
     <Grid Margin="20">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
+        <Border Background="{DynamicResource CardBackgroundBrush}" CornerRadius="8" Padding="20">
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="15" ShadowDepth="2" Opacity="0.1" Color="Black"/>
+            </Border.Effect>
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
 
-        <!-- Top Panel: Selector + Panorama -->
-        <StackPanel Grid.Row="0" Margin="0,0,0,10">
+                <!-- Top Panel: Selector + Panorama -->
+                <StackPanel Grid.Row="0" Margin="0,0,0,10">
             <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
                 <TextBlock Text="Selecione o Bingo:" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                <ComboBox x:Name="BingoSelector" Width="200" DisplayMemberPath="Nome" SelectionChanged="BingoSelector_SelectionChanged"/>
+                <ComboBox x:Name="BingoSelector" Width="200" SelectionChanged="BingoSelector_SelectionChanged">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Nome}"/>
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
                 <Button Content="Atualizar Lista" Click="RefreshButton_Click" Margin="10,0,0,0" Padding="5,2"/>
             </StackPanel>
 
             <!-- Panorama / Filtros -->
             <StackPanel Orientation="Horizontal">
-                <Button x:Name="BtnFilterDisponivel" Content="Disponíveis: 0" Click="Filter_Click" Tag="Disponivel" Margin="0,0,10,0" Padding="10,5" Background="#DDDDDD"/>
-                <Button x:Name="BtnFilterPendente" Content="Pendentes: 0" Click="Filter_Click" Tag="Pendente" Margin="0,0,10,0" Padding="10,5" Background="#DDDDDD"/>
-                <Button x:Name="BtnFilterConfirmado" Content="Confirmados: 0" Click="Filter_Click" Tag="Confirmado" Margin="0,0,10,0" Padding="10,5" Background="#DDDDDD"/>
-                <Button x:Name="BtnFilterTotal" Content="Total: 0" Click="Filter_Click" Tag="Total" Margin="0,0,10,0" Padding="10,5" Background="#DDDDDD"/>
+                <Button x:Name="BtnFilterDisponivel" Content="Disponíveis: 0" Click="Filter_Click" Tag="Disponivel" Margin="0,0,10,0" Padding="10,5"/>
+                <Button x:Name="BtnFilterPendente" Content="Pendentes: 0" Click="Filter_Click" Tag="Pendente" Margin="0,0,10,0" Padding="10,5"/>
+                <Button x:Name="BtnFilterConfirmado" Content="Confirmados: 0" Click="Filter_Click" Tag="Confirmado" Margin="0,0,10,0" Padding="10,5"/>
+                <Button x:Name="BtnFilterTotal" Content="Total: 0" Click="Filter_Click" Tag="Total" Margin="0,0,10,0" Padding="10,5"/>
             </StackPanel>
         </StackPanel>
 
@@ -52,7 +63,7 @@
                     <Style.Triggers>
                         <!-- Linha fica cinza se tiver Dono (indicando que está salvo/preenchido) -->
                         <DataTrigger Binding="{Binding NomeDono, Converter={StaticResource StringNotEmptyConverter}}" Value="True">
-                            <Setter Property="Background" Value="LightGray"/>
+                            <Setter Property="Background" Value="{DynamicResource HeaderBackgroundBrush}"/>
                         </DataTrigger>
                     </Style.Triggers>
                 </Style>
@@ -95,5 +106,7 @@
         <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right">
             <Button x:Name="BtnCopy" Content="Copiar Lista Total (WhatsApp)" Click="CopyWhatsapp_Click" Padding="10,5" Background="#25D366" Foreground="White" FontWeight="Bold"/>
         </StackPanel>
+            </Grid>
+        </Border>
     </Grid>
 </UserControl>
