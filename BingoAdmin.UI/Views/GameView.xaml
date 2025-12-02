@@ -8,6 +8,7 @@
              d:DesignHeight="450" d:DesignWidth="800"
              TextOptions.TextFormattingMode="Display">
     <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
         <local:MascaraToBrushCollectionConverter x:Key="MascaraToBrushConverter"/>
     </UserControl.Resources>
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
@@ -93,7 +94,7 @@
 
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
                     <TextBlock Text="Histórico (Tempo Real):" FontWeight="Bold" VerticalAlignment="Center"/>
-                    <Button x:Name="BtnCompartilharHistorico" Content="📤 Compartilhar" Click="BtnCompartilharHistorico_Click" Margin="10,0,0,0" Padding="5,2" FontSize="10" Background="#17a2b8" Foreground="White"/>
+                    <Button x:Name="BtnCompartilharHistorico" Content="📤 Compartilhar" Click="BtnCompartilharHistorico_Click" Margin="10,0,0,0" Padding="5,2" FontSize="10" Background="#5DADE2" Foreground="White"/>
                 </StackPanel>
                 
                 <ListBox x:Name="ListHistorico" Height="100" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Margin="0,0,0,10" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
@@ -117,6 +118,7 @@
                 <StackPanel Orientation="Horizontal" Margin="0,10,0,5">
                     <TextBlock Text="Padrão da Rodada:" FontWeight="Bold" VerticalAlignment="Center"/>
                     <CheckBox x:Name="ChkModoDinamicoRodada" Content="Modo Dinâmico" Margin="10,0,0,0" VerticalAlignment="Center" Click="ChkModoDinamicoRodada_Click"/>
+                    <CheckBox x:Name="ChkModoUnico" Content="Modo Único" Margin="10,0,0,0" VerticalAlignment="Center" ToolTip="Se marcado, o padrão ganho é removido da rodada" Visibility="{Binding ElementName=ChkModoDinamicoRodada, Path=IsChecked, Converter={StaticResource BooleanToVisibilityConverter}}" Click="ChkModoUnico_Click"/>
                 </StackPanel>
                 
                 <ComboBox x:Name="PatternSelector" Height="50" SelectionChanged="PatternSelector_SelectionChanged" ToolTip="Clique para alterar o padrão" MaxDropDownHeight="300">
@@ -142,7 +144,7 @@
                         </DataTemplate>
                     </ComboBox.ItemTemplate>
                 </ComboBox>
-                <Button x:Name="BtnConfigurarPadroes" Content="Configurar Padrões" Click="BtnConfigurarPadroes_Click" Height="50" Margin="0,0,0,0" Visibility="Collapsed" Background="#17a2b8" Foreground="White" FontWeight="Bold"/>
+                <Button x:Name="BtnConfigurarPadroes" Content="Configurar Padrões" Click="BtnConfigurarPadroes_Click" Height="50" Margin="0,0,0,0" Visibility="Collapsed" Background="#5DADE2" Foreground="White" FontWeight="Bold"/>
             </StackPanel>
 
             <!-- Right Panel: Board -->

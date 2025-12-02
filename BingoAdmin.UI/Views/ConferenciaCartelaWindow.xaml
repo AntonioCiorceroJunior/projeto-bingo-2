@@ -15,6 +15,7 @@
         <StackPanel Margin="0,0,0,20">
             <TextBlock x:Name="TxtTitulo" Text="CARTELA" Foreground="White" FontSize="24" FontWeight="Bold" HorizontalAlignment="Center"/>
             <TextBlock x:Name="TxtDetalhes" Text="Dono: - | Combo: -" Foreground="Gray" FontSize="16" HorizontalAlignment="Center" Margin="0,5,0,0"/>
+            <TextBlock x:Name="TxtPadrao" Text="Padrão: -" Foreground="{DynamicResource PrimaryBrush}" FontSize="14" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,5,0,0" Visibility="Collapsed"/>
         </StackPanel>
 
         <Border Grid.Row="1" BorderBrush="{DynamicResource PrimaryBrush}" BorderThickness="2" CornerRadius="5" Padding="10" Background="White">

@@ -19,6 +19,8 @@ namespace BingoAdmin.UI.Services
         private Random _random = new Random();
         private readonly FeedService _feedService;
         private readonly GameStatusService _gameStatusService;
+        
+        public bool ModoUnicoAtivo { get; set; } = false;
 
         public event Action<int>? OnNumeroSorteado;
         public event Action<List<GanhadorInfo>>? OnGanhadoresEncontrados;
@@ -33,9 +35,44 @@ namespace BingoAdmin.UI.Services
 
         public void CarregarDadosBingo(int bingoId)
         {
-            _feedService.SwitchBingoContext(bingoId);
+            // _feedService.SwitchBingoContext(bingoId); // Moved down
             // _feedService.AddMessage("Sistema", "Carregando dados do Bingo...", "Info"); // Reduced verbosity
             _cachedCartelas.Clear();
+            
+            var bingo = _context.Bingos.FirstOrDefault(b => b.Id == bingoId);
+            if (bingo != null)
+            {
+                _feedService.SwitchBingoContext(bingoId, bingo.Nome);
+                _gameStatusService.CurrentBingoTitle = bingo.Nome;
+                _gameStatusService.CurrentRoundTitle = "Aguardando Início";
+                
+                // Tentar carregar a última rodada ativa ou a primeira não iniciada para mostrar contexto
+                var lastActiveRound = _context.Rodadas
+                    .Where(r => r.BingoId == bingoId && r.Status != "NaoIniciada")
+                    .OrderByDescending(r => r.Id)
+                    .FirstOrDefault();
+
+                if (lastActiveRound != null)
+                {
+                    _gameStatusService.CurrentRoundTitle = $"{lastActiveRound.NumeroOrdem}ª Rodada";
+                    
+                    // Carregar sorteios dessa rodada para o painel lateral
+                    var sorteio = _context.Sorteios.FirstOrDefault(s => s.RodadaId == lastActiveRound.Id);
+                    if (sorteio != null && !string.IsNullOrEmpty(sorteio.BolasSorteadas))
+                    {
+                        _gameStatusService.ClearRecentBalls();
+                        var nums = sorteio.BolasSorteadas.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                                         .Select(int.Parse)
+                                         .TakeLast(20); // Pegar os últimos 20 na ordem original para inserção correta (pilha)
+                        
+                        foreach(var n in nums)
+                        {
+                            _gameStatusService.AddRecentBall(n);
+                        }
+                    }
+                }
+            }
+
             var cartelas = _context.Cartelas
                 .Include(c => c.Combo)
                 .Where(c => c.BingoId == bingoId)
@@ -73,6 +110,8 @@ namespace BingoAdmin.UI.Services
                 .FirstOrDefault(r => r.Id == rodadaId);
 
             if (_rodadaAtual == null) throw new Exception("Rodada não encontrada");
+
+            _gameStatusService.CurrentRoundTitle = $"{_rodadaAtual.NumeroOrdem}ª Rodada";
 
             // Se não tiver padrão (ex: rodada extra), assume cartela cheia (tudo 1)
             _mascaraAtual = _rodadaAtual.Padrao?.Mascara ?? new string('1', 25);
@@ -131,7 +170,15 @@ namespace BingoAdmin.UI.Services
                 {
                     var nums = sorteio.BolasSorteadas.Split(',', StringSplitOptions.RemoveEmptyEntries)
                                      .Select(int.Parse);
-                    foreach(var n in nums) _numerosSorteados.Add(n);
+                    foreach(var n in nums) 
+                    {
+                        _numerosSorteados.Add(n);
+                        // Não adicionamos ao GameStatusService aqui porque o ClearRecentBalls() já limpou
+                        // e queremos adicionar na ordem correta se necessário, mas geralmente IniciarRodada
+                        // é para começar a jogar, então o histórico visual começa vazio ou carrega tudo?
+                        // Se a rodada já estava em andamento, devemos restaurar o visual também.
+                        _gameStatusService.AddRecentBall(n);
+                    }
                 }
             }
             else
@@ -229,7 +276,7 @@ namespace BingoAdmin.UI.Services
             else if (numero <= 60) letter = "G";
             else letter = "O";
 
-            _feedService.AddMessage("Sorteio", $"{letter} | {numero}", "Info");
+            // _feedService.AddMessage("Sorteio", $"{letter} | {numero}", "Info");
             _gameStatusService.AddRecentBall(numero);
 
             // Atualizar persistência
@@ -273,7 +320,8 @@ namespace BingoAdmin.UI.Services
                                 ComboNumero = cartela.ComboNumero,
                                 NumeroCartela = cartela.NumeroCartela,
                                 NomeDono = cartela.Dono,
-                                NomePadrao = bp.Padrao.Nome // Adicionar info do padrão ganho
+                                NomePadrao = bp.Padrao.Nome, // Adicionar info do padrão ganho
+                                MascaraPadrao = bp.Padrao.Mascara
                             });
                             
                             // Marcar padrão como sorteado
@@ -318,19 +366,37 @@ namespace BingoAdmin.UI.Services
                 }
             }
 
-            if (padroesSorteadosNestaVerificacao.Any())
+            if (padroesSorteadosNestaVerificacao.Any() && ModoUnicoAtivo)
             {
                 _context.SaveChanges();
                 // Remover da lista em memória
                 _padroesDinamicosAtivos.RemoveAll(x => padroesSorteadosNestaVerificacao.Contains(x.Id));
             }
+            else if (padroesSorteadosNestaVerificacao.Any())
+            {
+                // Se não for modo único, apenas salva o estado no banco (que foi sorteado), mas NÃO remove da lista ativa
+                _context.SaveChanges();
+            }
 
             if (novosGanhadores.Any())
             {
-                foreach(var g in novosGanhadores) 
+                if (novosGanhadores.Count > 1)
                 {
-                    _ganhadoresIds.Add(g.CartelaId);
-                    _feedService.AddMessage("BINGO!", $"Ganhador: Combo {g.ComboNumero} - Cartela {g.NumeroCartela} ({g.NomePadrao})", "Success");
+                    // Pedra Maior (Empate)
+                    _feedService.AddMessage("Bingo! - Pedra Maior", "Ganhadores:", "PedraMaior");
+                    foreach(var g in novosGanhadores) 
+                    {
+                        _ganhadoresIds.Add(g.CartelaId);
+                        _feedService.AddMessage("Ganhador", $"{g.NomeDono}, Combo {g.ComboNumero}, Cartela {g.NumeroCartela}", "PedraMaior");
+                    }
+                }
+                else
+                {
+                    foreach(var g in novosGanhadores) 
+                    {
+                        _ganhadoresIds.Add(g.CartelaId);
+                        _feedService.AddMessage("BINGO!", $"Ganhador: {g.NomeDono}, Combo {g.ComboNumero}, Cartela {g.NumeroCartela}", "Success");
+                    }
                 }
 
                 OnGanhadoresEncontrados?.Invoke(novosGanhadores);
@@ -506,5 +572,6 @@ namespace BingoAdmin.UI.Services
         public int NumeroCartela { get; set; }
         public string NomeDono { get; set; } = string.Empty;
         public string NomePadrao { get; set; } = string.Empty; // Adicionado para armazenar o nome do padrão dinâmico, se aplicável
+        public string MascaraPadrao { get; set; } // Adicionado para armazenar a máscara do padrão vencedor
     }
 }

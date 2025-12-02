@@ -43,7 +43,7 @@
 
             <StackPanel Orientation="Horizontal" Margin="0,20,0,0">
                 <Button Content="Limpar Grid" Click="LimparGrid_Click" Margin="0,0,10,0" Padding="10,5"/>
-                <Button Content="Salvar Novo Padrão" Click="SalvarPadrao_Click" Padding="10,5" Background="#007ACC" Foreground="White"/>
+                <Button Content="Salvar Novo Padrão" Click="SalvarPadrao_Click" Padding="10,5" Background="#5DADE2" Foreground="White"/>
                 <Button x:Name="BtnExcluir" Content="Excluir Selecionado" Click="ExcluirPadrao_Click" Margin="10,0,0,0" Padding="10,5" Background="#FF4444" Foreground="White" Visibility="Collapsed"/>
             </StackPanel>
             

@@ -63,7 +63,7 @@ namespace BingoAdmin.UI.Services
             }
         }
 
-        public void SwitchBingoContext(int bingoId)
+        public void SwitchBingoContext(int bingoId, string bingoName = "")
         {
             if (_currentBingoId == bingoId) return;
 
@@ -96,7 +96,8 @@ namespace BingoAdmin.UI.Services
                         // Initialize empty history for new bingo
                         _history[bingoId] = new List<FeedMessage>();
                         // Optional: Add a welcome message
-                        AddMessage("Sistema", $"Feed conectado ao Bingo {bingoId}", "Info");
+                        string name = !string.IsNullOrEmpty(bingoName) ? bingoName : $"Bingo {bingoId}";
+                        AddMessage("Sistema", $"Feed conectado ao {name}", "Info");
                     }
                 });
             }

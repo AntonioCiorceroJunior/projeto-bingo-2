@@ -10,8 +10,30 @@ namespace BingoAdmin.UI.Services
         private double _currentTimerProgress = 0;
         private string _nextRoundTimerText = "--";
         private bool _isAutoDrawActive = false;
+        private string _currentBingoTitle = "Nenhum Bingo Selecionado";
+        private string _currentRoundTitle = "--";
 
         public ObservableCollection<string> RecentBalls { get; } = new ObservableCollection<string>();
+
+        public string CurrentBingoTitle
+        {
+            get => _currentBingoTitle;
+            set
+            {
+                _currentBingoTitle = value;
+                OnPropertyChanged(nameof(CurrentBingoTitle));
+            }
+        }
+
+        public string CurrentRoundTitle
+        {
+            get => _currentRoundTitle;
+            set
+            {
+                _currentRoundTitle = value;
+                OnPropertyChanged(nameof(CurrentRoundTitle));
+            }
+        }
 
         public string CurrentTimerText
         {

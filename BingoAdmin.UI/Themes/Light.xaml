@@ -1,7 +1,7 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <!-- Cores Principais (Fluent Design) -->
-    <SolidColorBrush x:Key="PrimaryBrush" Color="#0091F8"/> <!-- Azul mais claro e vibrante -->
+    <SolidColorBrush x:Key="PrimaryBrush" Color="#5DADE2"/> <!-- Azul mais claro e vibrante -->
     <SolidColorBrush x:Key="PrimaryForegroundBrush" Color="White"/>
     
     <!-- Backgrounds -->
@@ -14,8 +14,9 @@
     <SolidColorBrush x:Key="SubTextBrush" Color="#606060"/>
     
     <!-- Headers e Botões -->
-    <SolidColorBrush x:Key="HeaderBackgroundBrush" Color="#0091F8"/>
-    <SolidColorBrush x:Key="ButtonPrimaryBackground" Color="#0091F8"/>
+    <SolidColorBrush x:Key="HeaderBackgroundBrush" Color="#5DADE2"/>
+    <SolidColorBrush x:Key="DashboardHeaderBrush" Color="#2980B9"/> <!-- Azul mais forte para o painel de controle -->
+    <SolidColorBrush x:Key="ButtonPrimaryBackground" Color="#5DADE2"/>
     <SolidColorBrush x:Key="ButtonPrimaryForeground" Color="White"/>
     
     <!-- Inputs -->
@@ -27,7 +28,7 @@
     <SolidColorBrush x:Key="TabItemHeaderBackground" Color="Transparent"/>
     <SolidColorBrush x:Key="TabItemHeaderForeground" Color="#606060"/>
     <SolidColorBrush x:Key="TabItemSelectedBackground" Color="White"/>
-    <SolidColorBrush x:Key="TabItemSelectedBorder" Color="#0091F8"/>
+    <SolidColorBrush x:Key="TabItemSelectedBorder" Color="#5DADE2"/>
 
     <!-- Extras -->
     <SolidColorBrush x:Key="ExtraRoundBackgroundBrush" Color="#FFF8E1"/>

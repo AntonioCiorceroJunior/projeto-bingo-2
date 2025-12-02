@@ -21,6 +21,7 @@ namespace BingoAdmin.UI.Views
         private readonly DesempateService _desempateService = null!;
         private readonly BingoContextService _bingoContext = null!;
         private readonly GameStatusService _gameStatusService = null!;
+        private readonly FeedService _feedService = null!;
         
         private DispatcherTimer _autoDrawTimer;
         private DispatcherTimer _countdownTimer; // For visual countdown
@@ -49,6 +50,7 @@ namespace BingoAdmin.UI.Views
             _desempateService = ((App)Application.Current).Host.Services.GetRequiredService<DesempateService>();
             _bingoContext = ((App)Application.Current).Host.Services.GetRequiredService<BingoContextService>();
             _gameStatusService = ((App)Application.Current).Host.Services.GetRequiredService<GameStatusService>();
+            _feedService = ((App)Application.Current).Host.Services.GetRequiredService<FeedService>();
 
             InitializeBoard();
             InitializeAutoDrawTimer();
@@ -199,8 +201,12 @@ namespace BingoAdmin.UI.Views
                 if (cartela != null)
                 {
                     var sorteados = _gameService.GetNumerosSorteados();
-                    var mascara = _gameService.GetMascaraAtual();
-                    var win = new ConferenciaCartelaWindow(cartela, sorteados, mascara);
+                    // Se tiver máscara específica do ganhador (modo dinâmico), usa ela. Senão, usa a atual global.
+                    var mascara = !string.IsNullOrEmpty(display.Info.MascaraPadrao) 
+                                  ? display.Info.MascaraPadrao 
+                                  : _gameService.GetMascaraAtual();
+                    
+                    var win = new ConferenciaCartelaWindow(cartela, sorteados, mascara, display.Info.NomePadrao);
                     win.ShowDialog();
                 }
             }
@@ -594,6 +600,7 @@ namespace BingoAdmin.UI.Views
                             if (!Ganhadores.Any(g => g.Texto == msg))
                             {
                                 Ganhadores.Add(new GanhadorDisplay { Texto = msg, Info = winnerItem.OriginalInfo });
+                                _feedService.AddMessage("Pedra Maior - Vencedor", $"Ganhador: {winnerItem.Nome}, Combo {winnerItem.ComboNumero}, Cartela {winnerItem.NumeroCartela} (Pedra: {winnerItem.PedraSorteada})", "Success");
                                 MessageBox.Show(msg, "TEMOS UM VENCEDOR NO DESEMPATE!", MessageBoxButton.OK, MessageBoxImage.Exclamation);
                             }
                         }
@@ -781,6 +788,11 @@ namespace BingoAdmin.UI.Views
                     _gameService.SetModoDinamico(novoEstado);
                 }
             }
+        }
+
+        private void ChkModoUnico_Click(object sender, RoutedEventArgs e)
+        {
+            _gameService.ModoUnicoAtivo = ChkModoUnico.IsChecked == true;
         }
     }
 

@@ -19,7 +19,7 @@
         </Grid.ColumnDefinitions>
 
         <!-- Header -->
-        <Border Grid.ColumnSpan="2" Background="{DynamicResource HeaderBackgroundBrush}" Padding="15" Effect="{DynamicResource DropShadowEffect}">
+        <Border Grid.ColumnSpan="2" Background="{DynamicResource DashboardHeaderBrush}" Padding="15" Effect="{DynamicResource DropShadowEffect}">
             <Grid>
                 <TextBlock Text="Bingo Admin - Painel de Controle" Foreground="White" FontSize="20" FontWeight="Bold" VerticalAlignment="Center"/>
             </Grid>
@@ -132,7 +132,20 @@
                 <!-- Recent Balls Section -->
                 <Border Grid.Row="1" Background="White" Padding="10" BorderThickness="0,0,0,1" BorderBrush="#EEE">
                     <StackPanel>
-                        <TextBlock Text="Últimos Sorteios" FontWeight="Bold" Foreground="{DynamicResource PrimaryBrush}" FontSize="12" Margin="0,0,0,5"/>
+                        <Grid Margin="0,0,0,5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Text="Últimos Sorteios" FontWeight="Bold" Foreground="{DynamicResource PrimaryBrush}" FontSize="12"/>
+                                <TextBlock Text="{Binding GameStatus.CurrentBingoTitle}" Foreground="#666" FontSize="10" TextTrimming="CharacterEllipsis"/>
+                            </StackPanel>
+                            <Border Background="{DynamicResource PrimaryBrush}" CornerRadius="3" Padding="4,1" VerticalAlignment="Top" Margin="5,0,0,0">
+                                <TextBlock Text="{Binding GameStatus.CurrentRoundTitle}" Foreground="White" FontSize="9" FontWeight="Bold"/>
+                            </Border>
+                        </Grid>
+                        
                         <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" PanningMode="HorizontalOnly">
                             <ItemsControl ItemsSource="{Binding GameStatus.RecentBalls}">
                                 <ItemsControl.ItemsPanel>
@@ -168,42 +181,63 @@
                 </Border>
 
                 <!-- Feed List -->
-                <ListBox Grid.Row="3" ItemsSource="{Binding FeedMessages}" BorderThickness="0" Background="Transparent" ScrollViewer.HorizontalScrollBarVisibility="Auto">
+                <ListBox Grid.Row="3" ItemsSource="{Binding FeedMessages}" BorderThickness="0" Background="Transparent" ScrollViewer.HorizontalScrollBarVisibility="Disabled" AlternationCount="2">
                     <ListBox.ItemTemplate>
                         <DataTemplate>
-                            <Grid Margin="0,4" Background="Transparent" MouseLeftButtonUp="FeedItem_MouseLeftButtonUp" Cursor="Hand">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                
-                                <!-- Time -->
-                                <TextBlock Text="{Binding FormattedTime}" Foreground="#999" FontSize="11" Margin="0,2,10,0" VerticalAlignment="Top"/>
-                                
-                                <!-- Content -->
-                                <StackPanel Grid.Column="1">
-                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,2">
-                                        <TextBlock Text="{Binding Title}" FontWeight="Bold" Foreground="{DynamicResource TextBrush}" Margin="0,0,5,0" FontSize="12"/>
-                                        <TextBlock Text="-" Foreground="#CCC" Margin="0,0,5,0"/>
-                                    </StackPanel>
+                            <Border Padding="5" Margin="0,1">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Background" Value="White"/>
+                                        <Style.Triggers>
+                                            <!-- Zebra Striping -->
+                                            <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=ListBoxItem}, Path=(ItemsControl.AlternationIndex)}" Value="1">
+                                                <Setter Property="Background" Value="#F5F5F5"/>
+                                            </DataTrigger>
+                                            
+                                            <!-- Type-based coloring -->
+                                            <DataTrigger Binding="{Binding Type}" Value="Success">
+                                                <Setter Property="Background" Value="#D4EDDA"/> <!-- Light Green -->
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding Type}" Value="PedraMaior">
+                                                <Setter Property="Background" Value="#FFF3CD"/> <!-- Light Yellow -->
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <Grid MouseLeftButtonUp="FeedItem_MouseLeftButtonUp" Cursor="Hand">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
                                     
-                                    <!-- Message Logic: Use TextTrimming if not expanded, TextWrapping if expanded -->
-                                    <TextBlock Text="{Binding Message}" Foreground="{DynamicResource SubTextBrush}" FontSize="12" TextWrapping="Wrap">
-                                        <TextBlock.Style>
-                                            <Style TargetType="TextBlock">
-                                                <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
-                                                <Setter Property="MaxHeight" Value="36"/>
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding IsExpanded}" Value="True">
-                                                        <Setter Property="TextTrimming" Value="None"/>
-                                                        <Setter Property="MaxHeight" Value="Infinity"/>
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </TextBlock.Style>
-                                    </TextBlock>
-                                </StackPanel>
-                            </Grid>
+                                    <!-- Time -->
+                                    <TextBlock Text="{Binding FormattedTime}" Foreground="#999" FontSize="11" Margin="0,2,10,0" VerticalAlignment="Top"/>
+                                    
+                                    <!-- Content -->
+                                    <StackPanel Grid.Column="1">
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,2">
+                                            <TextBlock Text="{Binding Title}" FontWeight="Bold" Foreground="{DynamicResource TextBrush}" Margin="0,0,5,0" FontSize="12"/>
+                                            <TextBlock Text="-" Foreground="#CCC" Margin="0,0,5,0"/>
+                                        </StackPanel>
+                                        
+                                        <!-- Message Logic: Use TextTrimming if not expanded, TextWrapping if expanded -->
+                                        <TextBlock Text="{Binding Message}" Foreground="{DynamicResource SubTextBrush}" FontSize="12" TextWrapping="Wrap">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                                                    <Setter Property="MaxHeight" Value="36"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsExpanded}" Value="True">
+                                                            <Setter Property="TextTrimming" Value="None"/>
+                                                            <Setter Property="MaxHeight" Value="Infinity"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
                         </DataTemplate>
                     </ListBox.ItemTemplate>
                 </ListBox>

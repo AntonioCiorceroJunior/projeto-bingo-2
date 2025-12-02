@@ -9,12 +9,18 @@ namespace BingoAdmin.UI.Views
 {
     public partial class ConferenciaCartelaWindow : Window
     {
-        public ConferenciaCartelaWindow(CachedCartela cartela, HashSet<int> numerosSorteados, string mascaraPadrao)
+        public ConferenciaCartelaWindow(CachedCartela cartela, HashSet<int> numerosSorteados, string mascaraPadrao, string nomePadrao = "")
         {
             InitializeComponent();
 
             TxtTitulo.Text = $"CARTELA {cartela.NumeroCartela}";
             TxtDetalhes.Text = $"{cartela.Dono} | Combo {cartela.ComboNumero}";
+
+            if (!string.IsNullOrEmpty(nomePadrao))
+            {
+                TxtPadrao.Text = $"Padrão Vencedor: {nomePadrao}";
+                TxtPadrao.Visibility = Visibility.Visible;
+            }
 
             PopulateGrid(cartela.Numeros, numerosSorteados, mascaraPadrao);
         }

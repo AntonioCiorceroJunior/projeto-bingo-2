@@ -1,0 +1,34 @@
+
+10. ATUALIZAÇÕES RECENTES (02/12/2025)
+--------------------------------------
+
+10.1. Reformulação Visual (UI/UX)
+    - Padronização de Cores:
+        - Substituição global de tons de azul inconsistentes ("Royal Blue", "Teal") pelo novo padrão "Soft Blue" (#5DADE2).
+        - Atualização do tema global em `Themes/Light.xaml`.
+        - Cabeçalho do Dashboard definido com tom mais forte (#2980B9) para destaque hierárquico.
+    - Redesign da Janela "Pedra Maior":
+        - Migração para tema claro (Fundo #F5F5F5, Texto Preto).
+        - Grid de ganhadores configurada como "Somente Leitura" para segurança.
+
+10.2. Melhorias no Feed de Atividades
+    - Contexto: Mensagem de conexão agora exibe o nome do Bingo (ex: "Feed conectado ao Bingo da Igreja") em vez do ID.
+    - Visualização:
+        - Implementação de "Zebra Striping" (linhas alternadas branca/cinza) para legibilidade.
+        - Código de cores semântico: Verde Claro (#D4EDDA) para vitórias, Amarelo Claro (#FFF3CD) para Pedra Maior.
+        - Correção de quebra de linha (Text Wrapping) para mensagens longas.
+    - Conteúdo:
+        - Remoção de logs excessivos (ex: cada bola sorteada).
+        - Anúncio detalhado de vencedores da Pedra Maior (Nome, Combo, Cartela e Pedra Sorteada).
+
+10.3. Aprimoramentos na Lógica de Jogo (GameService)
+    - Conferência de Cartela:
+        - Exibição explícita do "Padrão Vencedor" na janela de conferência (útil para Modo Dinâmico).
+        - Correção visual para destacar a máscara correta que gerou a vitória.
+    - Modo Único (Nova Funcionalidade):
+        - Implementação de checkbox "Modo Único" na tela de jogo.
+        - Lógica: Quando ativado, se um padrão é conquistado, ele é removido da lista de padrões ativos da rodada, impedindo novos ganhadores com o mesmo padrão.
+
+10.4. Segurança e Integridade
+    - Bloqueio de edição na grid de resultados da Pedra Maior.
+    - Refinamento nas mensagens de log para evitar poluição visual.
