@@ -32,6 +32,7 @@ namespace BingoAdmin.UI.Views
 
             LoadBingos();
             _bingoContext.OnBingoChanged += OnGlobalBingoChanged;
+            _bingoContext.OnBingoListUpdated += LoadBingos;
         }
 
         private void OnGlobalBingoChanged(int bingoId)

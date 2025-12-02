@@ -10,10 +10,32 @@ namespace BingoAdmin.UI.Services
         private double _currentTimerProgress = 0;
         private string _nextRoundTimerText = "--";
         private bool _isAutoDrawActive = false;
+        private bool _isFeedVisibleOnTv = false;
+        private bool _isGameRunning = false;
         private string _currentBingoTitle = "Nenhum Bingo Selecionado";
         private string _currentRoundTitle = "--";
 
         public ObservableCollection<string> RecentBalls { get; } = new ObservableCollection<string>();
+
+        public bool IsGameRunning
+        {
+            get => _isGameRunning;
+            set
+            {
+                _isGameRunning = value;
+                OnPropertyChanged(nameof(IsGameRunning));
+            }
+        }
+
+        public bool IsFeedVisibleOnTv
+        {
+            get => _isFeedVisibleOnTv;
+            set
+            {
+                _isFeedVisibleOnTv = value;
+                OnPropertyChanged(nameof(IsFeedVisibleOnTv));
+            }
+        }
 
         public string CurrentBingoTitle
         {

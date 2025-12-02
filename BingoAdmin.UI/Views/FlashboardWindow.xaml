@@ -36,6 +36,8 @@
                 </DataTrigger>
             </Style.Triggers>
         </Style>
+        
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
     </Window.Resources>
 
     <Grid Margin="20">
@@ -49,6 +51,7 @@
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/> <!-- Header B I N G O -->
                 <RowDefinition Height="*"/>    <!-- Numbers -->
+                <RowDefinition Height="Auto"/> <!-- Feed Area (Optional) -->
             </Grid.RowDefinitions>
 
             <!-- B I N G O Headers -->
@@ -155,6 +158,32 @@
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
             </Grid>
+
+            <!-- Feed Area on TV -->
+            <Border Grid.Row="2" Margin="0,20,0,0" Background="#333" CornerRadius="10" Padding="15" 
+                    Visibility="{Binding GameStatus.IsFeedVisibleOnTv, Converter={StaticResource BoolToVis}}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="150"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock Text="Últimas Atividades" FontSize="18" FontWeight="Bold" Margin="0,0,0,10" Foreground="#AAA"/>
+                    <ListBox Grid.Row="1" ItemsSource="{Binding FeedMessages}" Background="Transparent" BorderThickness="0" ScrollViewer.VerticalScrollBarVisibility="Hidden">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,2">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="{Binding FormattedTime}" Foreground="#888" Margin="0,0,10,0" FontSize="14"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding Message}" Foreground="White" TextWrapping="Wrap" FontSize="16"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Grid>
+            </Border>
         </Grid>
 
         <!-- Right Side: Current Number & Info -->
@@ -177,15 +206,48 @@
 
             <!-- Pattern Display -->
             <Border Grid.Row="1" Background="#222" CornerRadius="10" Padding="10">
-                <StackPanel>
-                    <TextBlock Text="PADRÃO ATUAL" HorizontalAlignment="Center" FontSize="20" FontWeight="Bold" Margin="0,0,0,10"/>
-                    <TextBlock x:Name="TxtPatternName" Text="Nenhum" HorizontalAlignment="Center" FontSize="16" Foreground="#AAA" Margin="0,0,0,10"/>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
                     
-                    <!-- Visual Grid for Pattern (5x5) -->
-                    <UniformGrid x:Name="PatternGrid" Rows="5" Columns="5" Width="200" Height="200" HorizontalAlignment="Center">
-                        <!-- Will be populated in code-behind -->
-                    </UniformGrid>
-                </StackPanel>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,10">
+                        <TextBlock Text="PADRÕES ATIVOS" FontSize="20" FontWeight="Bold" Foreground="White" VerticalAlignment="Center"/>
+                        <Border Background="{DynamicResource PrimaryBrush}" CornerRadius="10" Padding="8,2" Margin="10,0,0,0" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding ActivePatterns.Count, StringFormat='{}{0} Ativos'}" Foreground="White" FontWeight="Bold" FontSize="14"/>
+                        </Border>
+                    </StackPanel>
+
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                        <ItemsControl ItemsSource="{Binding ActivePatterns}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel Orientation="Horizontal" HorizontalAlignment="Center"/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Margin="10">
+                                        <TextBlock Text="{Binding Name}" HorizontalAlignment="Center" FontSize="16" Foreground="#AAA" Margin="0,0,0,5" TextWrapping="Wrap" MaxWidth="200" TextAlignment="Center"/>
+                                        <ItemsControl ItemsSource="{Binding GridCells}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <UniformGrid Rows="5" Columns="5" Width="150" Height="150"/>
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border Background="{Binding}" Margin="1" CornerRadius="2"/>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </Grid>
             </Border>
             
             <!-- Marquee Placeholder -->

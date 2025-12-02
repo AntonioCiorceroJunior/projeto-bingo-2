@@ -35,7 +35,8 @@ namespace BingoAdmin.UI.Services
                 new Padrao { Nome = "Moldura Grande", Mascara = "1111110001100011000111111", IsPredefinido = true },
                 new Padrao { Nome = "5 na Louca", Mascara = "RANDOM:5", IsPredefinido = true },
                 new Padrao { Nome = "7 na Louca", Mascara = "RANDOM:7", IsPredefinido = true },
-                new Padrao { Nome = "10 na Louca", Mascara = "RANDOM:10", IsPredefinido = true }
+                new Padrao { Nome = "10 na Louca", Mascara = "RANDOM:10", IsPredefinido = true },
+                new Padrao { Nome = "Pé Frio", Mascara = "1111111111111111111111111", IsPredefinido = true }
             };
 
             foreach (var p in padroesIniciais)

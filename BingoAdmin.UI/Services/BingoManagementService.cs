@@ -13,11 +13,13 @@ namespace BingoAdmin.UI.Services
     {
         private readonly BingoContext _context;
         private readonly BingoService _bingoDomainService;
+        private readonly BingoContextService _bingoContextService;
 
-        public BingoManagementService(BingoContext context, BingoService bingoDomainService)
+        public BingoManagementService(BingoContext context, BingoService bingoDomainService, BingoContextService bingoContextService)
         {
             _context = context;
             _bingoDomainService = bingoDomainService;
+            _bingoContextService = bingoContextService;
         }
 
         public async Task<int> CriarBingoAsync(string nome, DateTime data, int qtdCombos, int cartelasPorCombo, List<RodadaConfigDto> rodadasConfig, bool modoDinamicoGlobal, List<int> padroesIds, IProgress<string> progress)
@@ -41,6 +43,9 @@ namespace BingoAdmin.UI.Services
             _context.Bingos.Add(bingo);
             await _context.SaveChangesAsync();
 
+            // Notify that a new bingo was created
+            _bingoContextService.NotifyBingoListUpdated();
+
             if (modoDinamicoGlobal && padroesIds != null && padroesIds.Any())
             {
                 foreach (var pid in padroesIds)
@@ -63,12 +68,14 @@ namespace BingoAdmin.UI.Services
                 {
                     BingoId = bingo.Id,
                     NumeroOrdem = config.Numero,
-                    TipoPremio = "",
+                    TipoPremio = config.TipoPremio,
                     Descricao = config.Descricao,
                     PadraoId = null, // Padrão em branco
                     Status = "NaoIniciada",
                     EhRodadaExtra = false,
-                    ModoPadroesDinamicos = config.ModoDinamico
+                    ModoPadroesDinamicos = config.ModoDinamico,
+                    MaximoGanhadores = config.MaximoGanhadores,
+                    TipoJogo = config.TipoJogo
                 };
                 _context.Rodadas.Add(rodada);
                 
@@ -151,9 +158,13 @@ namespace BingoAdmin.UI.Services
             return bingo.Id;
         }
 
-        public async Task AtualizarBingoAsync(int id, string nome, DateTime data, int qtdRodadas)
+        public async Task AtualizarBingoAsync(int id, string nome, DateTime data, int qtdRodadas, List<RodadaConfigDto> rodadasConfig)
         {
-            var bingo = await _context.Bingos.Include(b => b.Rodadas).FirstOrDefaultAsync(b => b.Id == id);
+            var bingo = await _context.Bingos
+                .Include(b => b.Rodadas)
+                .ThenInclude(r => r.RodadaPadroes)
+                .FirstOrDefaultAsync(b => b.Id == id);
+
             if (bingo != null)
             {
                 bingo.Nome = nome;
@@ -193,6 +204,38 @@ namespace BingoAdmin.UI.Services
                     }
                 }
 
+                // Atualizar detalhes das rodadas existentes
+                foreach (var config in rodadasConfig)
+                {
+                    var rodada = bingo.Rodadas.FirstOrDefault(r => r.NumeroOrdem == config.Numero);
+                    if (rodada != null)
+                    {
+                        rodada.Descricao = config.Descricao;
+                        rodada.TipoPremio = config.TipoPremio;
+                        rodada.ModoPadroesDinamicos = config.ModoDinamico;
+                        rodada.MaximoGanhadores = config.MaximoGanhadores;
+                        rodada.TipoJogo = config.TipoJogo;
+
+                        // Atualizar padrões dinâmicos
+                        if (config.ModoDinamico)
+                        {
+                            // Remove existing
+                            _context.RodadaPadroes.RemoveRange(rodada.RodadaPadroes);
+                            
+                            // Add new
+                            foreach (var pid in config.PadroesIds)
+                            {
+                                _context.RodadaPadroes.Add(new RodadaPadrao
+                                {
+                                    RodadaId = rodada.Id,
+                                    PadraoId = pid,
+                                    FoiSorteado = false
+                                });
+                            }
+                        }
+                    }
+                }
+
                 await _context.SaveChangesAsync();
             }
         }
@@ -209,7 +252,11 @@ namespace BingoAdmin.UI.Services
 
         public async Task<List<Bingo>> ListarBingosAsync()
         {
-            return await _context.Bingos.OrderByDescending(b => b.DataInicioPrevista).ToListAsync();
+            return await _context.Bingos
+                .Include(b => b.Rodadas)
+                .ThenInclude(r => r.RodadaPadroes)
+                .OrderByDescending(b => b.DataInicioPrevista)
+                .ToListAsync();
         }
     }
 
@@ -217,7 +264,10 @@ namespace BingoAdmin.UI.Services
     {
         public int Numero { get; set; }
         public string Descricao { get; set; } = string.Empty;
+        public string TipoPremio { get; set; } = string.Empty;
         public bool ModoDinamico { get; set; }
+        public int? MaximoGanhadores { get; set; }
+        public string TipoJogo { get; set; } = "Padrao";
         public List<int> PadroesIds { get; set; } = new();
     }
 }

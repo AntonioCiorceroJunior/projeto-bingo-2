@@ -29,9 +29,21 @@ namespace BingoAdmin.UI.Views
             _bingoContext = services.GetRequiredService<BingoContextService>();
 
             _gameService.OnGanhadoresEncontrados += OnGanhadoresEncontrados;
+            // _gameService.OnRodadaReiniciada += OnRodadaReiniciada; // GameService is transient, so this event might not fire on this instance
+            _bingoContext.OnRodadaReiniciada += OnRodadaReiniciada;
 
             LoadBingos();
             _bingoContext.OnBingoChanged += OnGlobalBingoChanged;
+            _bingoContext.OnBingoListUpdated += LoadBingos;
+        }
+
+        private void OnRodadaReiniciada()
+        {
+            // Reload current view to clear data
+            Dispatcher.Invoke(() => 
+            {
+                LoadDesempates();
+            });
         }
 
         private void OnGlobalBingoChanged(int bingoId)

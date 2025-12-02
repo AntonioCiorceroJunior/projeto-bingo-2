@@ -1,6 +1,7 @@
 <UserControl x:Class="BingoAdmin.UI.Views.RodadasConfigView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:sys="clr-namespace:System;assembly=mscorlib"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              mc:Ignorable="d" 
@@ -36,6 +37,15 @@
                 <DataGridTextColumn Header="Ordem" Binding="{Binding NumeroOrdem}" IsReadOnly="True" Width="60"/>
                 <DataGridTextColumn Header="Prêmio" Binding="{Binding TipoPremio}" Width="150"/>
                 <DataGridTextColumn Header="Descrição" Binding="{Binding Descricao}" Width="*"/>
+                <DataGridTextColumn Header="Max. Ganhadores" Binding="{Binding MaximoGanhadores}" Width="100"/>
+                <DataGridComboBoxColumn Header="Tipo Jogo" SelectedValueBinding="{Binding TipoJogo}" Width="100">
+                    <DataGridComboBoxColumn.ItemsSource>
+                        <x:Array Type="{x:Type sys:String}">
+                            <sys:String>Padrao</sys:String>
+                            <sys:String>PeFrio</sys:String>
+                        </x:Array>
+                    </DataGridComboBoxColumn.ItemsSource>
+                </DataGridComboBoxColumn>
                 <DataGridComboBoxColumn x:Name="PadraoColumn" Header="Padrão" SelectedValueBinding="{Binding PadraoId}" DisplayMemberPath="Nome" SelectedValuePath="Id" Width="150"/>
             </DataGrid.Columns>
         </DataGrid>

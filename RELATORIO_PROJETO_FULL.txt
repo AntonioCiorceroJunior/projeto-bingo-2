@@ -1,7 +1,7 @@
 RELATÓRIO TÉCNICO EXAUSTIVO DO PROJETO BINGO ADMIN
 ====================================================
 Data de Geração: 24/05/2024
-Versão do Documento: 4.2 (Atualizado em 02/12/2025)
+Versão do Documento: 4.1 (Atualizado em 02/12/2025)
 
 1. VISÃO GERAL DO SISTEMA
 -------------------------
@@ -80,8 +80,6 @@ Esta camada define a estrutura de dados e as regras de negócio fundamentais.
      - PadraoId (FK): Padrão de vitória (ex: Cartela Cheia).
      - Status (string): "NaoIniciada", "EmAndamento", "Encerrada".
      - EhRodadaExtra (bool): Indica se foi criada ad-hoc durante o jogo.
-     - MaximoGanhadores (int?): Limite de ganhadores para encerramento automático.
-     - TipoJogo (string): "Normal", "PeFrio", "NaLouca".
    - Relacionamentos: 1:N com Ganhadores.
 
 3.5. Entidade: Padrao
@@ -220,10 +218,10 @@ Estes serviços orquestram a lógica da aplicação e mantêm o estado em memór
      - Seção 3: Controles do Feed (Limpar, Histórico).
      - Seção 4: Feed de Atividades (Lista rolável com itens expansíveis).
 
-6.3. BingoConfigView (Configuração Unificada)
+6.3. BingoConfigView (Configuração)
    - Arquivo: BingoConfigView.xaml / .cs
-   - Funcionalidade: Interface centralizada para criação e edição de eventos, rodadas e padrões.
-   - Destaque: Substitui a antiga "RodadasConfigView", permitindo configurar prêmios, padrões e regras (ex: Max Ganhadores, Pé Frio) em uma única tela.
+   - Funcionalidade: Formulário para criar novos eventos.
+   - Destaque: Checkbox "Modo Padrões Dinâmicos" habilita a seleção múltipla de padrões na lista.
 
 6.3. App.xaml.cs (Inicialização)
    - Configura o container de Injeção de Dependência (`ServiceProvider`).

@@ -83,6 +83,18 @@ namespace BingoAdmin.UI
                     }
                     catch { /* Ignore if column already exists */ }
 
+                    try
+                    {
+                        context.Database.ExecuteSqlRaw(@"ALTER TABLE ""Rodadas"" ADD COLUMN ""MaximoGanhadores"" INTEGER NULL;");
+                    }
+                    catch { /* Ignore if column already exists */ }
+
+                    try
+                    {
+                        context.Database.ExecuteSqlRaw(@"ALTER TABLE ""Rodadas"" ADD COLUMN ""TipoJogo"" TEXT NOT NULL DEFAULT '';");
+                    }
+                    catch { /* Ignore if column already exists */ }
+
                     context.Database.ExecuteSqlRaw(@"
                         CREATE TABLE IF NOT EXISTS ""RodadaPadroes"" (
                             ""Id"" INTEGER NOT NULL CONSTRAINT ""PK_RodadaPadroes"" PRIMARY KEY AUTOINCREMENT,

@@ -28,6 +28,7 @@ namespace BingoAdmin.UI.Views
             LoadBingos();
             LoadPadroes();
             _bingoContext.OnBingoChanged += OnGlobalBingoChanged;
+            _bingoContext.OnBingoListUpdated += LoadBingos;
         }
 
         private void OnGlobalBingoChanged(int bingoId)
@@ -44,29 +45,40 @@ namespace BingoAdmin.UI.Views
 
         private void LoadBingos()
         {
-            var bingos = _comboService.GetBingos();
-            BingoSelector.ItemsSource = bingos;
-            
-            if (_bingoContext.CurrentBingoId != -1)
+            // Use fresh scope to ensure we see newly created Bingos
+            var services = ((App)Application.Current).Host.Services;
+            using (var scope = services.CreateScope())
             {
-                var target = System.Linq.Enumerable.FirstOrDefault(bingos, b => b.Id == _bingoContext.CurrentBingoId);
-                if (target != null)
+                var comboService = scope.ServiceProvider.GetRequiredService<ComboService>();
+                var bingos = comboService.GetBingos();
+                BingoSelector.ItemsSource = bingos;
+                
+                if (_bingoContext.CurrentBingoId != -1)
                 {
-                    BingoSelector.SelectedItem = target;
-                    return;
+                    var target = System.Linq.Enumerable.FirstOrDefault(bingos, b => b.Id == _bingoContext.CurrentBingoId);
+                    if (target != null)
+                    {
+                        BingoSelector.SelectedItem = target;
+                        return;
+                    }
                 }
-            }
 
-            if (BingoSelector.Items.Count > 0) BingoSelector.SelectedIndex = 0;
+                if (BingoSelector.Items.Count > 0) BingoSelector.SelectedIndex = 0;
+            }
         }
 
         private void LoadPadroes()
         {
-            var padroes = _padraoService.GetPadroes();
-            // Acessa a coluna pelo índice ou nome se o x:Name falhar
-            if (RodadasGrid.Columns.Count > 3 && RodadasGrid.Columns[3] is DataGridComboBoxColumn comboCol)
+            var services = ((App)Application.Current).Host.Services;
+            using (var scope = services.CreateScope())
             {
-                comboCol.ItemsSource = padroes;
+                var padraoService = scope.ServiceProvider.GetRequiredService<PadraoService>();
+                var padroes = padraoService.GetPadroes();
+                // Acessa a coluna pelo índice ou nome se o x:Name falhar
+                if (RodadasGrid.Columns.Count > 3 && RodadasGrid.Columns[3] is DataGridComboBoxColumn comboCol)
+                {
+                    comboCol.ItemsSource = padroes;
+                }
             }
         }
 
@@ -88,7 +100,12 @@ namespace BingoAdmin.UI.Views
         {
             if (BingoSelector.SelectedItem is Bingo selectedBingo)
             {
-                RodadasGrid.ItemsSource = _rodadaService.GetRodadas(selectedBingo.Id);
+                var services = ((App)Application.Current).Host.Services;
+                using (var scope = services.CreateScope())
+                {
+                    var rodadaService = scope.ServiceProvider.GetRequiredService<RodadaService>();
+                    RodadasGrid.ItemsSource = rodadaService.GetRodadas(selectedBingo.Id);
+                }
             }
             else
             {
@@ -109,11 +126,16 @@ namespace BingoAdmin.UI.Views
             {
                 try
                 {
-                    foreach (var item in items)
+                    var services = ((App)Application.Current).Host.Services;
+                    using (var scope = services.CreateScope())
                     {
-                        if (item is Rodada rodada)
+                        var rodadaService = scope.ServiceProvider.GetRequiredService<RodadaService>();
+                        foreach (var item in items)
                         {
-                            _rodadaService.AtualizarRodada(rodada);
+                            if (item is Rodada rodada)
+                            {
+                                rodadaService.AtualizarRodada(rodada);
+                            }
                         }
                     }
                     MessageBox.Show("Todas as alterações foram salvas!");
