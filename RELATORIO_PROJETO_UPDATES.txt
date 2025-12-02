@@ -32,3 +32,14 @@
 10.4. Segurança e Integridade
     - Bloqueio de edição na grid de resultados da Pedra Maior.
     - Refinamento nas mensagens de log para evitar poluição visual.
+
+10.5. Automação e Simplificação (02/12/2025 - Parte 2)
+    - Simplificação da Configuração:
+        - Remoção da aba separada "Configurar Rodadas".
+        - Unificação da configuração na tela "Configurar Bingo", permitindo editar dados do bingo, rodadas e padrões em um único fluxo.
+    - Novos Modos de Jogo:
+        - Implementação do tipo de jogo "Pé Frio" (ganha quem não marcar nada).
+        - Suporte visual para padrões aleatórios ("Na Louca") com representação gráfica dos números 5, 7 e 10.
+    - Automação de Fim de Rodada:
+        - Adicionado campo "Máximo de Ganhadores" (ComboBox 1-10) na configuração da rodada.
+        - Implementação de evento automático: Ao atingir o limite de ganhadores, o sorteio para, a rodada é encerrada e o sistema seleciona automaticamente a próxima rodada.

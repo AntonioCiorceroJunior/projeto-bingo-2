@@ -53,6 +53,8 @@ namespace BingoAdmin.UI.Services
                 existing.Descricao = rodada.Descricao;
                 existing.TipoPremio = rodada.TipoPremio;
                 existing.PadraoId = rodada.PadraoId;
+                existing.MaximoGanhadores = rodada.MaximoGanhadores;
+                existing.TipoJogo = rodada.TipoJogo;
                 _context.SaveChanges();
             }
         }

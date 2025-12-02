@@ -1,6 +1,7 @@
 <UserControl x:Class="BingoAdmin.UI.Views.BingoConfigView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:sys="clr-namespace:System;assembly=mscorlib"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              mc:Ignorable="d" 
@@ -42,11 +43,36 @@
                 </StackPanel>
 
                 <!-- Configuração das Rodadas -->
-                <GroupBox Header="Configuração das Rodadas" Height="150" Margin="0,0,0,10">
+                <GroupBox Header="Configuração das Rodadas" Height="310" Margin="0,0,0,10">
                     <DataGrid x:Name="GridRodadasConfig" AutoGenerateColumns="False" CanUserAddRows="False">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="#" Binding="{Binding Numero}" IsReadOnly="True" Width="30"/>
+                            <DataGridTextColumn Header="Prêmio" Binding="{Binding TipoPremio}" Width="100"/>
                             <DataGridTextColumn Header="Descrição" Binding="{Binding Descricao}" Width="*"/>
+                            <DataGridComboBoxColumn Header="Max. Ganhadores" SelectedValueBinding="{Binding MaximoGanhadores}" Width="100">
+                                <DataGridComboBoxColumn.ItemsSource>
+                                    <x:Array Type="{x:Type sys:Int32}">
+                                        <sys:Int32>1</sys:Int32>
+                                        <sys:Int32>2</sys:Int32>
+                                        <sys:Int32>3</sys:Int32>
+                                        <sys:Int32>4</sys:Int32>
+                                        <sys:Int32>5</sys:Int32>
+                                        <sys:Int32>6</sys:Int32>
+                                        <sys:Int32>7</sys:Int32>
+                                        <sys:Int32>8</sys:Int32>
+                                        <sys:Int32>9</sys:Int32>
+                                        <sys:Int32>10</sys:Int32>
+                                    </x:Array>
+                                </DataGridComboBoxColumn.ItemsSource>
+                            </DataGridComboBoxColumn>
+                            <DataGridComboBoxColumn Header="Tipo Jogo" SelectedValueBinding="{Binding TipoJogo}" Width="100">
+                                <DataGridComboBoxColumn.ItemsSource>
+                                    <x:Array Type="{x:Type sys:String}">
+                                        <sys:String>Padrao</sys:String>
+                                        <sys:String>PeFrio</sys:String>
+                                    </x:Array>
+                                </DataGridComboBoxColumn.ItemsSource>
+                            </DataGridComboBoxColumn>
                             <DataGridTemplateColumn Header="Modo Dinâmico" Width="100">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>

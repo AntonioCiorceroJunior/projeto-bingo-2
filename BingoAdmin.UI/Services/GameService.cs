@@ -19,18 +19,22 @@ namespace BingoAdmin.UI.Services
         private Random _random = new Random();
         private readonly FeedService _feedService;
         private readonly GameStatusService _gameStatusService;
+        private readonly BingoContextService _bingoContextService;
         
         public bool ModoUnicoAtivo { get; set; } = false;
 
         public event Action<int>? OnNumeroSorteado;
         public event Action<List<GanhadorInfo>>? OnGanhadoresEncontrados;
         public event Action<string>? OnPadraoDinamicoSorteado; // Evento para notificar UI
+        public event Action? OnRodadaReiniciada; // Evento para notificar UI que a rodada foi reiniciada
+        public event Action? OnRodadaEncerrada; // Evento para notificar UI que a rodada foi encerrada automaticamente
 
-        public GameService(BingoContext context, FeedService feedService, GameStatusService gameStatusService)
+        public GameService(BingoContext context, FeedService feedService, GameStatusService gameStatusService, BingoContextService bingoContextService)
         {
             _context = context;
             _feedService = feedService;
             _gameStatusService = gameStatusService;
+            _bingoContextService = bingoContextService;
         }
 
         public void CarregarDadosBingo(int bingoId)
@@ -255,6 +259,14 @@ namespace BingoAdmin.UI.Services
                 _feedService.AddMessage("Erro", "Tentativa de sorteio sem rodada iniciada.", "Error");
                 throw new Exception("Nenhuma rodada iniciada.");
             }
+
+            // Check if round is already finished (e.g. by max winners)
+            if (_rodadaAtual.Status == "Encerrada")
+            {
+                _feedService.AddMessage("Aviso", "A rodada já está encerrada.", "Warning");
+                throw new Exception("A rodada já está encerrada.");
+            }
+
             if (_numerosSorteados.Count >= 75) 
             {
                 _feedService.AddMessage("Erro", "Todos os números já foram sorteados.", "Error");
@@ -295,6 +307,124 @@ namespace BingoAdmin.UI.Services
         }
 
         private void VerificarGanhadores()
+        {
+            if (_rodadaAtual != null && _rodadaAtual.TipoJogo == "PeFrio")
+            {
+                VerificarGanhadoresPeFrio();
+            }
+            else
+            {
+                VerificarGanhadoresPadrao();
+            }
+
+            // Check Max Winners
+            if (_rodadaAtual != null && _rodadaAtual.MaximoGanhadores.HasValue && _rodadaAtual.MaximoGanhadores > 0)
+            {
+                // Re-fetch winners count because _ganhadoresIds might have been updated
+                if (_ganhadoresIds.Count >= _rodadaAtual.MaximoGanhadores.Value)
+                {
+                    if (_rodadaAtual.Status != "Encerrada")
+                    {
+                        _rodadaAtual.Status = "Encerrada";
+                        _context.SaveChanges();
+                        _feedService.AddMessage("Sistema", "Limite de ganhadores atingido. Rodada encerrada automaticamente.", "Warning");
+                        OnRodadaEncerrada?.Invoke();
+                    }
+                }
+            }
+        }
+
+        private void VerificarGanhadoresPeFrio()
+        {
+            if (_cachedCartelas.Count > 3000)
+            {
+                _feedService.AddMessage("Erro", "Modo Pé Frio disponível apenas para até 3000 cartelas.", "Error");
+                return;
+            }
+
+            var survivors = new List<CachedCartela>();
+            var justEliminated = new List<CachedCartela>();
+            int lastDrawn = _numerosSorteados.LastOrDefault();
+
+            foreach (var cartela in _cachedCartelas)
+            {
+                if (_ganhadoresIds.Contains(cartela.Id)) continue;
+
+                int hits = 0;
+                bool hitByLast = false;
+                
+                foreach(var n in cartela.Numeros)
+                {
+                    if (n != 0 && _numerosSorteados.Contains(n))
+                    {
+                        hits++;
+                        if (n == lastDrawn) hitByLast = true;
+                    }
+                }
+
+                if (hits == 0)
+                {
+                    survivors.Add(cartela);
+                }
+                else if (hits == 1 && hitByLast)
+                {
+                    justEliminated.Add(cartela);
+                }
+            }
+
+            var novosGanhadores = new List<GanhadorInfo>();
+
+            if (survivors.Count == 1)
+            {
+                // We have a winner!
+                var winner = survivors.First();
+                novosGanhadores.Add(new GanhadorInfo 
+                { 
+                    CartelaId = winner.Id, 
+                    ComboNumero = winner.ComboNumero, 
+                    NumeroCartela = winner.NumeroCartela, 
+                    NomeDono = winner.Dono,
+                    NomePadrao = "Pé Frio (Invicto)"
+                });
+            }
+            else if (survivors.Count == 0 && justEliminated.Any())
+            {
+                // Everyone hit something. The winners are the ones who lasted longest (just eliminated).
+                foreach(var c in justEliminated)
+                {
+                    novosGanhadores.Add(new GanhadorInfo 
+                    { 
+                        CartelaId = c.Id, 
+                        ComboNumero = c.ComboNumero, 
+                        NumeroCartela = c.NumeroCartela, 
+                        NomeDono = c.Dono,
+                        NomePadrao = "Pé Frio (Último a marcar)"
+                    });
+                }
+            }
+            else if (survivors.Count > 1 && _numerosSorteados.Count >= 74)
+            {
+                 // Tie breaker at the end
+                 foreach(var c in survivors)
+                {
+                    novosGanhadores.Add(new GanhadorInfo 
+                    { 
+                        CartelaId = c.Id, 
+                        ComboNumero = c.ComboNumero, 
+                        NumeroCartela = c.NumeroCartela, 
+                        NomeDono = c.Dono,
+                        NomePadrao = "Pé Frio (Empate Final)"
+                    });
+                }
+            }
+
+            if (novosGanhadores.Any())
+            {
+                ProcessarNovosGanhadores(novosGanhadores);
+            }
+        }
+
+        private void VerificarGanhadoresPadrao()
         {
             var novosGanhadores = new List<GanhadorInfo>();
             var padroesSorteadosNestaVerificacao = new HashSet<int>();
@@ -380,28 +510,33 @@ namespace BingoAdmin.UI.Services
 
             if (novosGanhadores.Any())
             {
-                if (novosGanhadores.Count > 1)
-                {
-                    // Pedra Maior (Empate)
-                    _feedService.AddMessage("Bingo! - Pedra Maior", "Ganhadores:", "PedraMaior");
-                    foreach(var g in novosGanhadores) 
-                    {
-                        _ganhadoresIds.Add(g.CartelaId);
-                        _feedService.AddMessage("Ganhador", $"{g.NomeDono}, Combo {g.ComboNumero}, Cartela {g.NumeroCartela}", "PedraMaior");
-                    }
-                }
-                else
-                {
-                    foreach(var g in novosGanhadores) 
-                    {
-                        _ganhadoresIds.Add(g.CartelaId);
-                        _feedService.AddMessage("BINGO!", $"Ganhador: {g.NomeDono}, Combo {g.ComboNumero}, Cartela {g.NumeroCartela}", "Success");
-                    }
-                }
-
-                OnGanhadoresEncontrados?.Invoke(novosGanhadores);
-                SalvarGanhadores(novosGanhadores);
+                ProcessarNovosGanhadores(novosGanhadores);
             }
+        }
+
+        private void ProcessarNovosGanhadores(List<GanhadorInfo> novosGanhadores)
+        {
+            if (novosGanhadores.Count > 1)
+            {
+                // Pedra Maior (Empate)
+                _feedService.AddMessage("Bingo! - Pedra Maior", "Ganhadores:", "PedraMaior");
+                foreach(var g in novosGanhadores) 
+                {
+                    _ganhadoresIds.Add(g.CartelaId);
+                    _feedService.AddMessage("Ganhador", $"{g.NomeDono}, Combo {g.ComboNumero}, Cartela {g.NumeroCartela}", "PedraMaior");
+                }
+            }
+            else
+            {
+                foreach(var g in novosGanhadores) 
+                {
+                    _ganhadoresIds.Add(g.CartelaId);
+                    _feedService.AddMessage("BINGO!", $"Ganhador: {g.NomeDono}, Combo {g.ComboNumero}, Cartela {g.NumeroCartela}", "Success");
+                }
+            }
+
+            OnGanhadoresEncontrados?.Invoke(novosGanhadores);
+            SalvarGanhadores(novosGanhadores);
         }
 
         private bool VerificarCartela(int[] numerosCartela)
@@ -491,6 +626,20 @@ namespace BingoAdmin.UI.Services
                 _context.Ganhadores.RemoveRange(ganhadores);
             }
 
+            // Remove PedraMaior history (Desempate)
+            var desempates = _context.PedraMaiorSorteios.Where(p => p.RodadaId == _rodadaAtual.Id).ToList();
+            if (desempates.Any())
+            {
+                _context.PedraMaiorSorteios.RemoveRange(desempates);
+            }
+
+            // Remove DesempateItens (Desempate Novo)
+            var desempateItens = _context.DesempateItens.Where(d => d.RodadaId == _rodadaAtual.Id).ToList();
+            if (desempateItens.Any())
+            {
+                _context.DesempateItens.RemoveRange(desempateItens);
+            }
+
             // Se estiver encerrada, volta para EmAndamento
             if (_rodadaAtual.Status == "Encerrada")
             {
@@ -498,6 +647,10 @@ namespace BingoAdmin.UI.Services
             }
 
             _context.SaveChanges();
+            
+            _feedService.AddMessage("Sistema", $"Rodada {_rodadaAtual.NumeroOrdem} reiniciada. Histórico e sorteios limpos.", "Warning");
+            OnRodadaReiniciada?.Invoke();
+            _bingoContextService.NotifyRodadaReiniciada();
         }
 
         public List<GanhadorInfo> GetGanhadoresAtuais()

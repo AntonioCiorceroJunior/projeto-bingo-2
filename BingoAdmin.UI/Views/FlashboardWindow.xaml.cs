@@ -4,6 +4,8 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using BingoAdmin.Domain.Entities;
+using BingoAdmin.UI.Services;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace BingoAdmin.UI.Views
 {
@@ -15,11 +17,25 @@ namespace BingoAdmin.UI.Views
         public ObservableCollection<BoardNumber> ColumnG { get; set; } = new ObservableCollection<BoardNumber>();
         public ObservableCollection<BoardNumber> ColumnO { get; set; } = new ObservableCollection<BoardNumber>();
 
+        private readonly FeedService _feedService;
+        private readonly GameStatusService _gameStatusService;
+
+        public ObservableCollection<FeedMessage> FeedMessages => _feedService.Messages;
+        public GameStatusService GameStatus => _gameStatusService;
+        public ObservableCollection<PatternDisplayViewModel> ActivePatterns { get; set; } = new ObservableCollection<PatternDisplayViewModel>();
+
         public event PropertyChangedEventHandler? PropertyChanged;
 
         public FlashboardWindow()
         {
             InitializeComponent();
+            
+            if (Application.Current is App app)
+            {
+                _feedService = app.Host.Services.GetRequiredService<FeedService>();
+                _gameStatusService = app.Host.Services.GetRequiredService<GameStatusService>();
+            }
+
             DataContext = this;
             InitializeBoard();
         }
@@ -64,46 +80,50 @@ namespace BingoAdmin.UI.Views
             TxtCurrentNumber.Text = "--";
         }
 
-        public void SetPattern(Padrao? padrao)
+        public void SetPatterns(List<Padrao> padroes)
         {
-            PatternGrid.Children.Clear();
-            if (padrao == null)
+            ActivePatterns.Clear();
+
+            if (padroes == null || !padroes.Any())
             {
-                TxtPatternName.Text = "Nenhum / Livre";
-                // Create empty grid
-                for (int i = 0; i < 25; i++)
-                {
-                    var border = new Border
-                    {
-                        Background = Brushes.DarkGray,
-                        Margin = new Thickness(1),
-                        CornerRadius = new CornerRadius(2)
-                    };
-                    PatternGrid.Children.Add(border);
-                }
+                // Add a "None" placeholder if desired, or just leave empty
+                // For now, let's add a blank one to keep the UI consistent if that's what was there before
+                ActivePatterns.Add(new PatternDisplayViewModel 
+                { 
+                    Name = "Nenhum / Livre", 
+                    GridCells = Enumerable.Repeat((Brush)Brushes.DarkGray, 25).ToList() 
+                });
                 return;
             }
 
-            TxtPatternName.Text = padrao.Nome;
-            bool[] matrix = new bool[25];
-            if (!string.IsNullOrEmpty(padrao.Mascara) && padrao.Mascara.Length == 25)
+            foreach (var padrao in padroes)
             {
-                for (int i = 0; i < 25; i++)
+                var cells = new List<Brush>();
+                if (!string.IsNullOrEmpty(padrao.Mascara) && padrao.Mascara.Length == 25)
                 {
-                    matrix[i] = padrao.Mascara[i] == '1';
+                    for (int i = 0; i < 25; i++)
+                    {
+                        cells.Add(padrao.Mascara[i] == '1' ? Brushes.Red : Brushes.DarkGray);
+                    }
                 }
-            }
-
-            for (int i = 0; i < 25; i++)
-            {
-                var border = new Border
+                else
                 {
-                    Margin = new Thickness(1),
-                    CornerRadius = new CornerRadius(2),
-                    Background = matrix[i] ? Brushes.Red : Brushes.DarkGray
-                };
-                PatternGrid.Children.Add(border);
+                    cells.AddRange(Enumerable.Repeat(Brushes.DarkGray, 25));
+                }
+
+                ActivePatterns.Add(new PatternDisplayViewModel
+                {
+                    Name = padrao.Nome,
+                    GridCells = cells
+                });
             }
+        }
+
+        // Deprecated/Compatibility wrapper
+        public void SetPattern(Padrao? padrao)
+        {
+            if (padrao == null) SetPatterns(new List<Padrao>());
+            else SetPatterns(new List<Padrao> { padrao });
         }
 
         private string GetLetter(int n)
@@ -114,5 +134,11 @@ namespace BingoAdmin.UI.Views
             if (n <= 60) return "G";
             return "O";
         }
+    }
+
+    public class PatternDisplayViewModel
+    {
+        public string Name { get; set; } = string.Empty;
+        public List<Brush> GridCells { get; set; } = new List<Brush>();
     }
 }

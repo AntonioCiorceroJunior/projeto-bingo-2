@@ -70,7 +70,25 @@ namespace BingoAdmin.UI.Views
 
             _gameService.OnNumeroSorteado += OnNumeroSorteado;
             _gameService.OnGanhadoresEncontrados += OnGanhadoresEncontrados;
+            _gameService.OnRodadaEncerrada += OnRodadaEncerrada;
             _bingoContext.OnBingoChanged += OnGlobalBingoChanged;
+            _bingoContext.OnBingoListUpdated += OnBingoListUpdated;
+        }
+
+        private void OnBingoListUpdated()
+        {
+            LoadBingos();
+            
+            if (!_gameStatusService.IsGameRunning)
+            {
+                 var bingos = BingoSelector.ItemsSource as List<Bingo>;
+                 var newest = bingos?.OrderByDescending(b => b.Id).FirstOrDefault();
+                 
+                 if (newest != null && newest.Id != _bingoContext.CurrentBingoId)
+                 {
+                     BingoSelector.SelectedItem = newest;
+                 }
+            }
         }
 
         private void OnGlobalBingoChanged(int bingoId)
@@ -264,8 +282,17 @@ namespace BingoAdmin.UI.Views
             // Sync Pattern
             if (RodadaSelector.SelectedItem is RodadaDisplay display)
             {
-                var padrao = AvailablePatterns.FirstOrDefault(p => p.Id == display.Rodada.PadraoId);
-                _flashboardWindow.SetPattern(padrao);
+                if (display.Rodada.ModoPadroesDinamicos)
+                {
+                     var padroesIds = _rodadaService.GetPadroesDaRodada(display.Rodada.Id);
+                     var activePatterns = AvailablePatterns.Where(p => padroesIds.Contains(p.Id)).ToList();
+                     _flashboardWindow.SetPatterns(activePatterns);
+                }
+                else
+                {
+                    var padrao = AvailablePatterns.FirstOrDefault(p => p.Id == display.Rodada.PadraoId);
+                    _flashboardWindow.SetPattern(padrao);
+                }
             }
         }
 
@@ -381,6 +408,10 @@ namespace BingoAdmin.UI.Views
                 
                 var padroesIds = _rodadaService.GetPadroesDaRodada(rodada.Id);
                 BtnConfigurarPadroes.Content = $"Configurar Padrões ({padroesIds.Count} selecionados)";
+
+                // Update Flashboard with multiple patterns
+                var activePatterns = AvailablePatterns.Where(p => padroesIds.Contains(p.Id)).ToList();
+                _flashboardWindow?.SetPatterns(activePatterns);
             }
             else
             {
@@ -417,6 +448,7 @@ namespace BingoAdmin.UI.Views
             // Check status
             if (rodada.Status == "NaoIniciada")
             {
+                _gameStatusService.IsGameRunning = false;
                 GameArea.Visibility = Visibility.Collapsed;
                 BtnIniciar.Visibility = Visibility.Visible;
                 BtnIniciar.IsEnabled = true;
@@ -466,6 +498,7 @@ namespace BingoAdmin.UI.Views
 
                 if (rodada.Status == "Encerrada")
                 {
+                    _gameStatusService.IsGameRunning = false;
                     OverlayEncerrada.Visibility = Visibility.Visible;
                     BtnSortear.IsEnabled = false;
                     BtnIniciar.Visibility = Visibility.Collapsed;
@@ -474,6 +507,7 @@ namespace BingoAdmin.UI.Views
                 }
                 else // EmAndamento
                 {
+                    _gameStatusService.IsGameRunning = true;
                     BtnIniciar.Visibility = Visibility.Collapsed; // Already started
                     BtnEncerrar.Visibility = Visibility.Visible;
                     BtnReiniciar.Visibility = Visibility.Visible;
@@ -493,6 +527,7 @@ namespace BingoAdmin.UI.Views
                     
                     // Force status update in local object to reflect DB change
                     display.Rodada.Status = "EmAndamento";
+                    _gameStatusService.IsGameRunning = true;
                     UpdateUIForSelectedRodada(display.Rodada);
                     
                     MessageBox.Show($"Rodada '{display.Rodada.NumeroOrdem}ª Rodada' iniciada!");
@@ -624,6 +659,35 @@ namespace BingoAdmin.UI.Views
             });
         }
 
+        private void OnRodadaEncerrada()
+        {
+            Dispatcher.Invoke(() =>
+            {
+                StopAutoDraw();
+                
+                // Update local object status
+                if (RodadaSelector.SelectedItem is RodadaDisplay currentDisplay)
+                {
+                    currentDisplay.Rodada.Status = "Encerrada";
+                    _gameStatusService.IsGameRunning = false;
+                }
+                
+                // Auto-advance to next round if available
+                if (RodadaSelector.SelectedIndex < RodadaSelector.Items.Count - 1)
+                {
+                    RodadaSelector.SelectedIndex++;
+                }
+                else
+                {
+                    // Just update UI for current finished round
+                    if (RodadaSelector.SelectedItem is RodadaDisplay display)
+                    {
+                        UpdateUIForSelectedRodada(display.Rodada);
+                    }
+                }
+            });
+        }
+
         private void BtnEncerrar_Click(object sender, RoutedEventArgs e)
         {
             if (MessageBox.Show("Tem certeza que deseja encerrar a rodada?", "Confirmar Encerramento", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
@@ -636,6 +700,7 @@ namespace BingoAdmin.UI.Views
                     if (RodadaSelector.SelectedItem is RodadaDisplay currentDisplay)
                     {
                         currentDisplay.Rodada.Status = "Encerrada";
+                        _gameStatusService.IsGameRunning = false;
                     }
                     
                     // Auto-advance to next round if available
@@ -673,6 +738,7 @@ namespace BingoAdmin.UI.Views
                     if (RodadaSelector.SelectedItem is RodadaDisplay currentDisplay)
                     {
                         currentDisplay.Rodada.Status = "EmAndamento";
+                        _gameStatusService.IsGameRunning = true;
                     }
 
                     // Reset UI

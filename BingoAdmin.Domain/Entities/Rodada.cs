@@ -14,6 +14,8 @@ namespace BingoAdmin.Domain.Entities
         public string Descricao { get; set; } = string.Empty;
         public bool EhRodadaExtra { get; set; }
         public bool ModoPadroesDinamicos { get; set; } // Flag para ativar modo dinâmico nesta rodada
+        public int? MaximoGanhadores { get; set; } // Limite de ganhadores para encerrar automaticamente
+        public string TipoJogo { get; set; } = "Padrao"; // "Padrao" ou "PeFrio"
         public string Status { get; set; } = "NaoIniciada"; // NaoIniciada, EmAndamento, Finalizada
         public List<Sorteio> Sorteios { get; set; } = new();
         public List<Ganhador> Ganhadores { get; set; } = new();

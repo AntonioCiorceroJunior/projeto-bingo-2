@@ -14,6 +14,7 @@ namespace BingoAdmin.UI.Views
     {
         private readonly BingoManagementService _bingoManagementService = null!;
         private readonly PadraoService _padraoService = null!;
+        private readonly BingoContextService _bingoContext = null!;
         private int? _bingoEmEdicaoId = null;
 
         public ObservableCollection<RodadaConfigViewModel> RodadasConfig { get; set; } = new ObservableCollection<RodadaConfigViewModel>();
@@ -25,6 +26,7 @@ namespace BingoAdmin.UI.Views
 
             _bingoManagementService = ((App)Application.Current).Host.Services.GetRequiredService<BingoManagementService>();
             _padraoService = ((App)Application.Current).Host.Services.GetRequiredService<PadraoService>();
+            _bingoContext = ((App)Application.Current).Host.Services.GetRequiredService<BingoContextService>();
             
             GridRodadasConfig.ItemsSource = RodadasConfig;
             InitializeRoundsCombo();
@@ -162,8 +164,11 @@ namespace BingoAdmin.UI.Views
                 {
                     Numero = r.Numero,
                     Descricao = r.Descricao,
+                    TipoPremio = r.TipoPremio,
                     ModoDinamico = r.ModoDinamico,
-                    PadroesIds = r.PadroesIds
+                    PadroesIds = r.PadroesIds,
+                    MaximoGanhadores = r.MaximoGanhadores,
+                    TipoJogo = r.TipoJogo
                 }).ToList();
 
                 int newBingoId = await _bingoManagementService.CriarBingoAsync(
@@ -180,6 +185,7 @@ namespace BingoAdmin.UI.Views
                 MessageBox.Show("Bingo criado com sucesso!");
                 LimparCampos();
                 CarregarBingos(newBingoId); // Auto-select new bingo
+                _bingoContext.SetCurrentBingo(newBingoId); // Set as global current bingo
             }
             catch (Exception ex)
             {
@@ -195,17 +201,28 @@ namespace BingoAdmin.UI.Views
         private async void Atualizar_Click(object sender, RoutedEventArgs e)
         {
             if (_bingoEmEdicaoId == null) return;
-            // Note: Update logic for rounds is complex, keeping simple for now or disabling round count update
-            // For now, we just validate basic fields.
+            
             int qtdRodadas = RodadasConfig.Count;
 
             try
             {
+                var rodadasDto = RodadasConfig.Select(r => new RodadaConfigDto
+                {
+                    Numero = r.Numero,
+                    Descricao = r.Descricao,
+                    TipoPremio = r.TipoPremio,
+                    ModoDinamico = r.ModoDinamico,
+                    PadroesIds = r.PadroesIds,
+                    MaximoGanhadores = r.MaximoGanhadores,
+                    TipoJogo = r.TipoJogo
+                }).ToList();
+
                 await _bingoManagementService.AtualizarBingoAsync(
                     _bingoEmEdicaoId.Value,
                     NomeBingoBox.Text,
                     DataBingoPicker.SelectedDate.Value,
-                    qtdRodadas
+                    qtdRodadas,
+                    rodadasDto
                 );
 
                 MessageBox.Show("Bingo atualizado com sucesso!");
@@ -244,6 +261,22 @@ namespace BingoAdmin.UI.Views
                 {
                     ChkRodadasPersonalizado.IsChecked = false;
                     CmbQtdRodadas.SelectedItem = bingo.QuantidadeRodadas;
+                }
+
+                // Populate RodadasConfig from existing rounds
+                RodadasConfig.Clear();
+                foreach (var rodada in bingo.Rodadas.OrderBy(r => r.NumeroOrdem))
+                {
+                    RodadasConfig.Add(new RodadaConfigViewModel
+                    {
+                        Numero = rodada.NumeroOrdem,
+                        Descricao = rodada.Descricao,
+                        TipoPremio = rodada.TipoPremio,
+                        ModoDinamico = rodada.ModoPadroesDinamicos,
+                        MaximoGanhadores = rodada.MaximoGanhadores,
+                        TipoJogo = rodada.TipoJogo,
+                        PadroesIds = rodada.RodadaPadroes.Select(rp => rp.PadraoId).ToList()
+                    });
                 }
 
                 // Bloquear campos que não podem ser editados facilmente após criação (por enquanto)
