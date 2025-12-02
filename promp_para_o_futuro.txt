@@ -1,0 +1,285 @@
+prompt para o futuro.
+
+Quero que você atue como meu consultor e implementador técnico para organizar e executar a evolução de um projeto chamado BingoAdmin.
+
+IMPORTANTE SOBRE MIM
+- Tenho TDAH, então preciso que você:
+  - Organize tudo em ETAPAS CLARAS e numeradas.
+  - Sempre me entregue listas de tarefas em formato de CHECKLIST.
+  - NÃO misture muitos assuntos ao mesmo tempo.
+  - Em cada resposta, foque em UMA FASE por vez (por exemplo: primeiro só landing page, depois API, depois outra coisa).
+  - Ao final de cada resposta, sempre pergunte: "Quer que eu te ajude a executar a próxima etapa?" em vez de já avançar sozinho.
+
+====================================
+1) CONTEXTO DO PROJETO BINGOADMIN
+====================================
+
+Tenho um sistema Desktop (Windows, WPF, .NET 8) chamado BingoAdmin, que é um software para administrar bingos:
+
+- Tecnologia:
+  - .NET 8
+  - WPF (XAML + C#)
+  - Arquitetura MVVM com camadas: Domain, Infra, UI
+  - Banco: SQLite
+  - ORM: Entity Framework Core 8
+  - Relatórios: QuestPDF
+  - DI: Microsoft.Extensions.DependencyInjection
+
+- Principais entidades e lógica:
+  - Bingo:
+    - Evento completo de bingo (nome, data, status, quantidade de combos, cartelas por combo, quantidade de rodadas, etc.).
+    - Suporta “Modo Padrões Dinâmicos” (padrões de vitória que mudam durante o jogo).
+  - Combo:
+    - Agrupamento de cartelas por jogador (nome, número do combo, código de validação).
+  - Cartela:
+    - Cartela 5x5, com geração respeitando faixas clássicas (B, I, N, G, O).
+    - Geração garante que NENHUMA cartela se repete no bingo (HashSet global).
+  - Rodada:
+    - Representa uma partida valendo prêmio dentro do evento (status, padrão, etc.).
+  - Padrão:
+    - Máscara de vitória (linha, X, cruz, cartela cheia, RANDOM:X, etc.).
+  - BingoPadrao:
+    - Relaciona Bingo com múltiplos padrões ativos no modo dinâmico.
+  - Ganhador / Sorteio / Desempate:
+    - Registro de ganhadores.
+    - Controle das bolas sorteadas.
+    - Lógica de desempate “Pedra Maior”.
+
+- Serviços principais:
+  - BingoService:
+    - Geração de combos e cartelas.
+  - GameService:
+    - Motor do jogo.
+    - Mantém todas as cartelas em memória (cache) para verificação rápida de ganhadores.
+    - Verifica padrões dinâmicos.
+  - DesempateService:
+    - Implementa lógica de Pedra Maior.
+  - PadraoService:
+    - Seed e gerenciamento de padrões.
+  - RelatorioService:
+    - Geração de PDFs com detalhes do evento, ganhadores, etc.
+
+- UI atual:
+  - WPF com:
+    - GameView (tela de sorteio: tabuleiro, lista de ganhadores, botões de controle).
+    - BingoConfigView (configuração do bingo, padrões dinâmicos, etc.).
+  - Sistema muito bom tecnicamente, mas a experiência é focada no OPERADOR, não no jogador.
+
+Resumo: o back-end e o motor do jogo são robustos, bem estruturados e escaláveis. O problema não é a lógica, e sim a EXPERIÊNCIA DE USO para jogadores, fluxo real de operação, integração com WhatsApp, vendas, etc.
+
+====================================
+2) PONTOS FORTES (O QUE JÁ ESTÁ MELHOR QUE MUITOS APPS)
+====================================
+
+Quero que você leve em conta que meu sistema já é forte em:
+
+1. Arquitetura limpa:
+   - Separação Domain / Infra / UI.
+   - MVVM bem definido.
+   - Injeção de dependência bem estruturada.
+
+2. Geração de cartelas:
+   - Respeita todas as regras clássicas de Bingo.
+   - Garante 100% de unicidade das cartelas em um bingo (HashSet global).
+
+3. Motor do jogo:
+   - GameService eficiente com cache das cartelas em memória.
+   - Verificação de ganhadores com base em padrões (máscaras).
+   - Suporte a múltiplos padrões dinâmicos no mesmo bingo.
+
+4. Padrões de vitória:
+   - Padrões clássicos (linha, coluna, cruz, X, cheia).
+   - Suporte a máscaras do tipo "RANDOM:X".
+
+5. Desempate:
+   - Lógica de “Pedra Maior” (mini-game de desempate entre ganhadores).
+
+6. Relatórios:
+   - Geração de PDFs com informações completas do evento e ganhadores.
+
+Conclusão: tecnicamente o sistema é forte. O problema não é de engenharia de regra de negócio.
+
+====================================
+3) PONTOS FRACOS / LACUNAS ATUAIS
+====================================
+
+Agora os pontos onde estou fraco em relação aos apps mais “vendáveis” e amigáveis do mercado:
+
+1. Não existe PORTAL DO JOGADOR:
+   - Jogadores não têm ambiente próprio para:
+     - ver suas cartelas,
+     - acompanhar o sorteio em tempo real,
+     - receber aviso automático quando ganham.
+
+2. Não há INTEGRAÇÃO NATIVA COM WHATSAPP:
+   - Nada de:
+     - envio automático de cartelas,
+     - mensagens de: “veja suas cartelas”, “acompanhe a rodada”, etc.
+   - Não existe uma experiência integrada com o grupo de bingo que joga por WhatsApp.
+
+3. Não há VENDA AUTOMÁTICA de combos/cartelas:
+   - Hoje o fluxo é manual.
+   - Falta:
+     - Integração com Pix,
+     - Geração automática de cartelas após pagamento,
+     - Envio automático para o jogador.
+
+4. UI e experiência visual ainda estão “técnicas” demais:
+   - A tela de jogo é funcional, mas não tem cara de produto premium.
+   - Falta um “painel de transmissão” bonito, com animações e layout enxuto.
+
+5. Não existe modo Web:
+   - O sistema é totalmente Desktop (WPF).
+   - Falta:
+     - landing page oficial do produto,
+     - portal web para jogadores,
+     - eventualmente APIs para integração.
+
+6. Analytics e transparência:
+   - Tenho relatório básico.
+   - Falta:
+     - estatísticas de números mais sorteados,
+     - análise de padrões,
+     - históricos visuais para confiança e transparência.
+
+7. Multi-host e multi-tela:
+   - Só existe uma visão de operador.
+   - Falta:
+     - conceito de “tela pública” (apenas exibição),
+     - múltiplos administradores conectados ao mesmo jogo.
+
+====================================
+4) OBJETIVO GERAL
+====================================
+
+Quero transformar o BingoAdmin em um “produto completo”, com:
+
+- Um site/landing page para apresentação:
+  - Domínio futuro: centraldebingo (por exemplo, centraldebingo.com).
+  - Landing page moderna para:
+    - explicar o produto,
+    - mostrar diferenciais,
+    - exibir prints,
+    - oferecer download do instalador.
+
+- Um plano claro de evolução:
+  1. Primeiro: comunicação (landing page).
+  2. Depois: experiência do jogador (portal/jogador web).
+  3. Depois: WhatsApp + venda automática.
+  4. Depois: melhorias de UX e recursos premium.
+
+====================================
+5) PRIORIDADES (BACKLOG MACRO)
+====================================
+
+Quero que você organize as prioridades assim:
+
+PRIORIDADE 1 – FUNDAMENTO EXTERNO
+- Criar uma landing page moderna com o nome “Central de Bingo”.
+- Estrutura mínima:
+  - Hero (explicação clara do que é o produto).
+  - Seção de vantagens / diferenciais.
+  - Seção explicando como o BingoAdmin funciona (para o operador).
+  - Seção “para quem é” (pessoas que fazem bingo por WhatsApp, igrejas, ONGs, etc.).
+  - Seção com prints (que vou adicionar depois).
+  - Chamada para download (link para o instalador do aplicativo).
+- Essa landing será estática (HTML/CSS/JS) para subir em GitHub Pages.
+
+PRIORIDADE 2 – EXPERIÊNCIA DO JOGADOR
+- Definir e desenhar (mesmo que só conceitualmente) um futuro PORTAL DO JOGADOR:
+  - tela para o jogador ver suas cartelas de forma responsiva,
+  - acompanhamento em tempo real das bolas sorteadas,
+  - destaque quando o jogador estiver perto de ganhar,
+  - notificação quando ele ganhar.
+
+PRIORIDADE 3 – INTEGRAÇÃO WHATSAPP
+- Desenhar o fluxo de interação:
+  - jogador compra combo,
+  - paga via Pix,
+  - recebe automaticamente as cartelas,
+  - recebe link/QR code para acessar a cartela,
+  - recebe avisos durante o sorteio.
+
+PRIORIDADE 4 – EXPERIÊNCIA VISUAL PREMIUM
+- Redesenhar:
+  - painel de transmissão (para TV ou projetor),
+  - UI do operador mais limpa e moderna,
+  - identidade visual consistente com a marca “Central de Bingo”.
+
+PRIORIDADE 5 – RECURSOS PREMIUM E DIFERENCIAIS
+- Analytics avançado:
+  - números mais sorteados,
+  - estatísticas por bingo,
+  - relatórios para transparência.
+- Ranking de jogadores.
+- Recursos automáticos como:
+  - auto-sorteio com configuração de velocidade,
+  - sugestões inteligentes para o operador.
+
+====================================
+6) O QUE EU QUERO QUE VOCÊ FAÇA PASSO A PASSO
+====================================
+
+Quero que você trabalhe comigo em FASES.
+
+FASE 1 – LANDING PAGE (CENTRALDEBINGO)
+- Objetivo: Criar TODOS os arquivos necessários para uma landing page estática moderna para o futuro domínio "centraldebingo".
+- Requisitos:
+  - Site estático (HTML + CSS + JS) pronto para GitHub Pages.
+  - Design moderno, responsivo, simples de manter.
+  - Estrutura de seções:
+    1. Hero: “Central de Bingo” + explicação curta.
+    2. Seção “Por que usar?” (focando em quem organiza bingos).
+    3. Seção “Como funciona o BingoAdmin?” (do ponto de vista do operador).
+    4. Seção “Diferenciais” (listar pontos fortes que mencionei).
+    5. Seção “Próximos recursos” (teaser das coisas futuras: portal do jogador, WhatsApp, Pix, etc.).
+    6. Seção “Download” (botão para baixar o instalador – posso definir a URL depois).
+  - Você deve:
+    - me mostrar primeiro o layout em forma de código HTML/CSS bem organizado,
+    - separar bem as seções com comentários,
+    - usar nomes de classes descritivos,
+    - evitar frameworks pesados (de preferência CSS puro ou algo simples).
+
+- MUITO IMPORTANTE:
+  - Não avance para Fase 2 sem eu pedir.
+  - Primeiro, me apresente:
+    - a estrutura do HTML,
+    - o CSS inicial,
+    - e me explique em uma lista como os arquivos estarão organizados:
+      - por exemplo:
+        - index.html
+        - /css/styles.css
+        - /img/ (para screenshots, que eu vou adicionar depois)
+
+FASE 2 – (APÓS EU PEDIR) PLANEJAMENTO DO PORTAL DO JOGADOR
+- Só faça essa fase quando eu disser.
+- Aí você:
+  - monta wireframes textuais,
+  - define as telas,
+  - e depois podemos pensar na stack (por exemplo, um front-end web em cima de uma API futura).
+
+====================================
+7) COMO QUERO QUE VOCÊ ME RESPONDA
+====================================
+
+Na sua primeira resposta:
+
+1. Faça um resumo curto para confirmar que entendeu o contexto.
+2. Em seguida, foque SOMENTE na FASE 1 (Landing Page Central de Bingo).
+3. Me entregue:
+   - uma proposta de estrutura de arquivos (index.html, css, etc.),
+   - o código HTML completo,
+   - o código CSS completo,
+   - com comentários explicando cada parte.
+4. Separe tudo de forma que eu possa:
+   - copiar/colar diretamente em arquivos,
+   - subir depois no GitHub Pages sem ficar perdido.
+
+Lembre-se: eu tenho TDAH.
+Então:
+- use títulos claros,
+- use listas numeradas,
+- deixe bem separado: "PASSO 1, PASSO 2, PASSO 3…"
+
+No final da resposta, pergunte:
+"Você quer que eu te ajude com o próximo passo (por exemplo, subir isso no GitHub Pages)?".

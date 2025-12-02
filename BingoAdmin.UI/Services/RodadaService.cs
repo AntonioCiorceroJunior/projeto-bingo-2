@@ -132,5 +132,35 @@ namespace BingoAdmin.UI.Services
             var rodadas = _context.Rodadas.Where(r => r.BingoId == bingoId).ToList();
             return rodadas.Any() ? rodadas.Max(r => r.NumeroOrdem) + 1 : 1;
         }
+
+        public List<int> GetPadroesDaRodada(int rodadaId)
+        {
+            return _context.RodadaPadroes
+                .Where(rp => rp.RodadaId == rodadaId)
+                .Select(rp => rp.PadraoId)
+                .ToList();
+        }
+
+        public void SalvarPadroesDaRodada(int rodadaId, List<int> padroesIds)
+        {
+            var existentes = _context.RodadaPadroes.Where(rp => rp.RodadaId == rodadaId).ToList();
+            _context.RodadaPadroes.RemoveRange(existentes);
+
+            foreach (var pid in padroesIds)
+            {
+                _context.RodadaPadroes.Add(new RodadaPadrao { RodadaId = rodadaId, PadraoId = pid });
+            }
+            _context.SaveChanges();
+        }
+
+        public void AtualizarModoDinamico(int rodadaId, bool modoDinamico)
+        {
+            var rodada = _context.Rodadas.Find(rodadaId);
+            if (rodada != null)
+            {
+                rodada.ModoPadroesDinamicos = modoDinamico;
+                _context.SaveChanges();
+            }
+        }
     }
 }

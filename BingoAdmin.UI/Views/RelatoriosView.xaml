@@ -5,17 +5,25 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
-    <Grid Margin="20">
-        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+    <Border Margin="20" Background="{DynamicResource CardBackgroundBrush}" CornerRadius="{DynamicResource ControlCornerRadius}" Effect="{DynamicResource DropShadowEffect}" Padding="20">
+        <Grid>
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
             <TextBlock Text="Relatórios e Encerramento" FontSize="24" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,0,0,30"/>
 
             <TextBlock Text="Selecione o Bingo:" Margin="0,0,0,5"/>
-            <ComboBox x:Name="BingoSelector" Width="300" DisplayMemberPath="Nome" Margin="0,0,0,20"/>
+            <ComboBox x:Name="BingoSelector" Width="300" Margin="0,0,0,20" SelectionChanged="BingoSelector_SelectionChanged">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding Nome}"/>
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
 
             <Button Content="Gerar Relatório Final (PDF)" Click="GerarRelatorio_Click" Width="300" Height="50" Background="#007ACC" Foreground="White" FontSize="16" FontWeight="Bold"/>
             
             <TextBlock Text="O relatório incluirá estatísticas, lista de rodadas e ganhadores." 
                        HorizontalAlignment="Center" Foreground="Gray" Margin="0,10,0,0" TextWrapping="Wrap" Width="300" TextAlignment="Center"/>
         </StackPanel>
-    </Grid>
+        </Grid>
+    </Border>
 </UserControl>

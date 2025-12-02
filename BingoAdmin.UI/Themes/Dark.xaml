@@ -1,0 +1,17 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <SolidColorBrush x:Key="MainBackgroundBrush" Color="#343541"/>
+    <SolidColorBrush x:Key="TextBrush" Color="#ECECF1"/>
+    <SolidColorBrush x:Key="HeaderBackgroundBrush" Color="#202123"/>
+    <SolidColorBrush x:Key="CardBackgroundBrush" Color="#444654"/>
+    <SolidColorBrush x:Key="BorderBrush" Color="#565869"/>
+    <SolidColorBrush x:Key="InputBackgroundBrush" Color="#40414F"/>
+    <SolidColorBrush x:Key="InputTextBrush" Color="#ECECF1"/>
+    <SolidColorBrush x:Key="ButtonPrimaryBackground" Color="#10A37F"/>
+    <SolidColorBrush x:Key="ButtonPrimaryForeground" Color="White"/>
+    <SolidColorBrush x:Key="TabItemHeaderBackground" Color="#202123"/>
+    <SolidColorBrush x:Key="TabItemHeaderForeground" Color="#ECECF1"/>
+    <SolidColorBrush x:Key="TabItemSelectedBackground" Color="#343541"/>
+    <SolidColorBrush x:Key="ExtraRoundBackgroundBrush" Color="#4A3B3B"/>
+    <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#343541"/>
+</ResourceDictionary>

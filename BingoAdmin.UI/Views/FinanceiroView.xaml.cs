@@ -11,6 +11,7 @@ namespace BingoAdmin.UI.Views
     {
         private readonly FinanceiroService _financeiroService;
         private readonly ComboService _comboService;
+        private readonly BingoContextService _bingoContext;
 
         public FinanceiroView()
         {
@@ -19,14 +20,39 @@ namespace BingoAdmin.UI.Views
 
             _financeiroService = ((App)Application.Current).Host.Services.GetRequiredService<FinanceiroService>();
             _comboService = ((App)Application.Current).Host.Services.GetRequiredService<ComboService>();
+            _bingoContext = ((App)Application.Current).Host.Services.GetRequiredService<BingoContextService>();
 
             LoadBingos();
+            _bingoContext.OnBingoChanged += OnGlobalBingoChanged;
+        }
+
+        private void OnGlobalBingoChanged(int bingoId)
+        {
+            if (BingoSelector.SelectedItem is Bingo current && current.Id == bingoId) return;
+
+            var bingos = BingoSelector.ItemsSource as System.Collections.Generic.List<Bingo>;
+            var target = System.Linq.Enumerable.FirstOrDefault(bingos, b => b.Id == bingoId);
+            if (target != null)
+            {
+                BingoSelector.SelectedItem = target;
+            }
         }
 
         private void LoadBingos()
         {
             var bingos = _comboService.GetBingos();
             BingoSelector.ItemsSource = bingos;
+            
+            if (_bingoContext.CurrentBingoId != -1)
+            {
+                var target = System.Linq.Enumerable.FirstOrDefault(bingos, b => b.Id == _bingoContext.CurrentBingoId);
+                if (target != null)
+                {
+                    BingoSelector.SelectedItem = target;
+                    return;
+                }
+            }
+
             if (bingos.Count > 0) BingoSelector.SelectedIndex = 0;
         }
 
@@ -34,6 +60,7 @@ namespace BingoAdmin.UI.Views
         {
             if (BingoSelector.SelectedItem is Bingo bingo)
             {
+                _bingoContext.SetCurrentBingo(bingo.Id);
                 TxtValorCombo.Text = _financeiroService.GetValorCombo(bingo.Id).ToString("F2");
                 LoadData(bingo.Id);
             }

@@ -35,6 +35,11 @@ namespace BingoAdmin.UI
                     services.AddTransient<DesempateService>();
                     services.AddTransient<RelatorioService>();
                     services.AddTransient<FinanceiroService>();
+                    
+                    // Global Services
+                    services.AddSingleton<FeedService>();
+                    services.AddSingleton<BingoContextService>();
+                    services.AddSingleton<GameStatusService>();
 
                     // Views
                     services.AddSingleton<MainWindow>();
@@ -63,9 +68,31 @@ namespace BingoAdmin.UI
                     try 
                     {
                         context.Database.ExecuteSqlRaw(@"ALTER TABLE ""Bingos"" ADD COLUMN ""ValorPorCombo"" TEXT NOT NULL DEFAULT '0';");
+                    }
+                    catch { /* Ignore if column already exists */ }
+
+                    try
+                    {
                         context.Database.ExecuteSqlRaw(@"ALTER TABLE ""Bingos"" ADD COLUMN ""QuantidadeRodadas"" INTEGER NOT NULL DEFAULT 0;");
                     }
                     catch { /* Ignore if column already exists */ }
+
+                    try
+                    {
+                        context.Database.ExecuteSqlRaw(@"ALTER TABLE ""Rodadas"" ADD COLUMN ""ModoPadroesDinamicos"" INTEGER NOT NULL DEFAULT 0;");
+                    }
+                    catch { /* Ignore if column already exists */ }
+
+                    context.Database.ExecuteSqlRaw(@"
+                        CREATE TABLE IF NOT EXISTS ""RodadaPadroes"" (
+                            ""Id"" INTEGER NOT NULL CONSTRAINT ""PK_RodadaPadroes"" PRIMARY KEY AUTOINCREMENT,
+                            ""RodadaId"" INTEGER NOT NULL,
+                            ""PadraoId"" INTEGER NOT NULL,
+                            ""FoiSorteado"" INTEGER NOT NULL,
+                            CONSTRAINT ""FK_RodadaPadroes_Rodadas_RodadaId"" FOREIGN KEY (""RodadaId"") REFERENCES ""Rodadas"" (""Id"") ON DELETE CASCADE,
+                            CONSTRAINT ""FK_RodadaPadroes_Padroes_PadraoId"" FOREIGN KEY (""PadraoId"") REFERENCES ""Padroes"" (""Id"") ON DELETE CASCADE
+                        );
+                    ");
 
                     // Create DesempateItens table manually if not exists (since we can't run migrations easily)
                     // Drop table removed to persist data

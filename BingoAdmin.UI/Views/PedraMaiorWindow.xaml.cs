@@ -26,6 +26,7 @@ namespace BingoAdmin.UI.Views
                     Nome = g.NomeDono,
                     ComboNumero = g.ComboNumero,
                     NumeroCartela = g.NumeroCartela,
+                    NomePadrao = g.NomePadrao,
                     OriginalInfo = g
                 });
             }
@@ -99,6 +100,7 @@ namespace BingoAdmin.UI.Views
         public string Nome { get; set; }
         public int ComboNumero { get; set; }
         public int NumeroCartela { get; set; }
+        public string NomePadrao { get; set; } = string.Empty;
         
         private int? _pedraSorteada;
         public int? PedraSorteada 

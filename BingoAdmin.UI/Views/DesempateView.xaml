@@ -6,45 +6,57 @@
              mc:Ignorable="d" 
              d:DesignHeight="500" d:DesignWidth="800"
              TextOptions.TextFormattingMode="Display">
-    <Grid Margin="20">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-        </Grid.RowDefinitions>
+    <Border Margin="20" Background="{DynamicResource CardBackgroundBrush}" CornerRadius="{DynamicResource ControlCornerRadius}" Effect="{DynamicResource DropShadowEffect}" Padding="20">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
 
-        <!-- Seleção -->
-        <StackPanel Grid.Row="0" Margin="0,0,0,20">
-            <TextBlock Text="Desempate - Pedra Maior" FontSize="20" FontWeight="Bold" Margin="0,0,0,10"/>
-            
-            <StackPanel Orientation="Horizontal">
-                <TextBlock Text="Bingo:" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                <ComboBox x:Name="BingoSelector" Width="200" DisplayMemberPath="Nome" SelectionChanged="BingoSelector_SelectionChanged"/>
-                <Button Content="Atualizar" Click="BtnAtualizar_Click" Margin="20,0,0,0" Padding="10,5"/>
+            <!-- Seleção -->
+            <StackPanel Grid.Row="0" Margin="0,0,0,20">
+                <TextBlock Text="Desempate - Pedra Maior" Style="{DynamicResource HeaderTextStyle}" Margin="0,0,0,10"/>
+                
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="Bingo:" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                    <ComboBox x:Name="BingoSelector" Width="200" SelectionChanged="BingoSelector_SelectionChanged">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Nome}"/>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                    <Button Content="Atualizar" Click="BtnAtualizar_Click" Margin="20,0,0,0" Padding="10,5" Style="{DynamicResource PrimaryButtonStyle}"/>
+                </StackPanel>
             </StackPanel>
-        </StackPanel>
 
-        <!-- Área de Desempate -->
-        <ScrollViewer Grid.Row="1">
-            <ItemsControl x:Name="ListaDesempates">
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <Expander Margin="0,0,0,10" IsExpanded="True" BorderBrush="Gray" BorderThickness="1">
-                            <Expander.Header>
-                                <TextBlock Text="{Binding HeaderText}" FontWeight="Bold" FontSize="16" Margin="10"/>
-                            </Expander.Header>
-                            <ListBox ItemsSource="{Binding Participantes}" BorderThickness="0" MouseDoubleClick="ListaParticipantes_MouseDoubleClick">
-                                <ListBox.ItemTemplate>
-                                    <DataTemplate>
-                                        <StackPanel Orientation="Horizontal" Margin="5">
-                                            <TextBlock Text="{Binding DisplayText}" 
-                                                       FontWeight="{Binding FontWeight}" 
-                                                       Foreground="{Binding Foreground}" 
-                                                       FontSize="14"/>
-                                            <TextBlock Text="{Binding GanhadorLabel}" 
-                                                       FontWeight="Bold" 
+            <!-- Área de Desempate -->
+            <ScrollViewer Grid.Row="1">
+                <ItemsControl x:Name="ListaDesempates">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Expander Margin="0,0,0,10" IsExpanded="True">
+                                <Expander.Header>
+                                    <TextBlock Text="{Binding HeaderText}" FontWeight="Bold" FontSize="16" Margin="10"/>
+                                </Expander.Header>
+                                <ListBox ItemsSource="{Binding Participantes}" BorderThickness="0" MouseDoubleClick="ListaParticipantes_MouseDoubleClick">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal" Margin="5">
+                                                <TextBlock x:Name="TxtParticipante" Text="{Binding DisplayText}" 
+                                                           FontWeight="{Binding FontWeight}" 
+                                                           Foreground="{DynamicResource TextBrush}" 
+                                                           FontSize="14"/>
+                                                <TextBlock Text="{Binding GanhadorLabel}" 
+                                                           FontWeight="Bold" 
                                                        Foreground="Green" 
                                                        FontSize="14"/>
                                         </StackPanel>
+                                        <DataTemplate.Triggers>
+                                            <DataTrigger Binding="{Binding IsGanhador}" Value="True">
+                                                <Setter TargetName="TxtParticipante" Property="Foreground" Value="Green"/>
+                                            </DataTrigger>
+                                        </DataTemplate.Triggers>
                                     </DataTemplate>
                                 </ListBox.ItemTemplate>
                             </ListBox>
@@ -53,5 +65,6 @@
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
         </ScrollViewer>
-    </Grid>
+        </Grid>
+    </Border>
 </UserControl>

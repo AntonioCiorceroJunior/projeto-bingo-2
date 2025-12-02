@@ -5,63 +5,104 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+    </UserControl.Resources>
     <Grid Margin="20">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
-        <!-- Form Panel -->
-        <StackPanel Grid.Column="0" Margin="0,0,20,0">
-            <TextBlock Text="Configuração do Bingo" FontSize="18" FontWeight="Bold" Margin="0,0,0,20"/>
-            
-            <TextBlock Text="Nome do Bingo"/>
-            <TextBox x:Name="NomeBingoBox" Margin="0,5,0,10"/>
-            
-            <TextBlock Text="Data Prevista"/>
-            <DatePicker x:Name="DataBingoPicker" Margin="0,5,0,10"/>
-            
-            <TextBlock Text="Quantidade de Combos"/>
-            <TextBox x:Name="QtdCombosBox" Margin="0,5,0,10"/>
-            
-            <TextBlock Text="Cartelas por Combo"/>
-            <TextBox x:Name="CartelasPorComboBox" Margin="0,5,0,10"/>
+        <!-- Form Panel (Card) -->
+        <Border Grid.Column="0" Background="{DynamicResource CardBackgroundBrush}" CornerRadius="8" Margin="0,0,10,0" Padding="20">
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="15" ShadowDepth="2" Opacity="0.1" Color="Black"/>
+            </Border.Effect>
+            <StackPanel>
+                <TextBlock Text="Configuração do Bingo" FontSize="18" FontWeight="Bold" Margin="0,0,0,20"/>
+                
+                <TextBlock Text="Nome do Bingo"/>
+                <TextBox x:Name="NomeBingoBox" Margin="0,5,0,10"/>
+                
+                <TextBlock Text="Data Prevista"/>
+                <DatePicker x:Name="DataBingoPicker" Margin="0,5,0,10"/>
+                
+                <TextBlock Text="Quantidade de Combos"/>
+                <TextBox x:Name="QtdCombosBox" Margin="0,5,0,10"/>
+                
+                <TextBlock Text="Cartelas por Combo"/>
+                <TextBox x:Name="CartelasPorComboBox" Margin="0,5,0,10"/>
 
-            <TextBlock Text="Quantidade de Rodadas"/>
-            <TextBox x:Name="QtdRodadasBox" Margin="0,5,0,10"/>
-            
-            <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
-                <Button x:Name="BtnGerar" Content="Salvar e Gerar" Click="GerarCombos_Click" Padding="10,5" Background="#007ACC" Foreground="White" Margin="0,0,10,0"/>
-                <Button x:Name="BtnAtualizar" Content="Atualizar" Click="Atualizar_Click" Padding="10,5" Visibility="Collapsed" Margin="0,0,10,0"/>
-                <Button x:Name="BtnCancelar" Content="Cancelar" Click="Cancelar_Click" Padding="10,5" Visibility="Collapsed"/>
+                <TextBlock Text="Quantidade de Rodadas"/>
+                <StackPanel Orientation="Horizontal" Margin="0,5,0,10">
+                    <ComboBox x:Name="CmbQtdRodadas" Width="80" SelectionChanged="CmbQtdRodadas_SelectionChanged"/>
+                    <CheckBox x:Name="ChkRodadasPersonalizado" Content="Personalizar Qtd" Margin="10,0,0,0" VerticalAlignment="Center" Checked="ChkRodadasPersonalizado_CheckedChanged" Unchecked="ChkRodadasPersonalizado_CheckedChanged"/>
+                    <TextBox x:Name="TxtQtdRodadasManual" Width="60" Margin="10,0,0,0" Visibility="Collapsed" TextChanged="TxtQtdRodadasManual_TextChanged"/>
+                </StackPanel>
+
+                <!-- Configuração das Rodadas -->
+                <GroupBox Header="Configuração das Rodadas" Height="150" Margin="0,0,0,10">
+                    <DataGrid x:Name="GridRodadasConfig" AutoGenerateColumns="False" CanUserAddRows="False">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="#" Binding="{Binding Numero}" IsReadOnly="True" Width="30"/>
+                            <DataGridTextColumn Header="Descrição" Binding="{Binding Descricao}" Width="*"/>
+                            <DataGridTemplateColumn Header="Modo Dinâmico" Width="100">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <CheckBox IsChecked="{Binding ModoDinamico, UpdateSourceTrigger=PropertyChanged}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTemplateColumn Header="Padrões" Width="80">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Button Content="Configurar" Click="ConfigurarPadroesRodada_Click"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </GroupBox>
+
+                <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                    <Button x:Name="BtnGerar" Content="Salvar e Gerar" Click="GerarCombos_Click" Padding="10,5" Style="{DynamicResource PrimaryButtonStyle}" Margin="0,0,10,0"/>
+                    <Button x:Name="BtnAtualizar" Content="Atualizar" Click="Atualizar_Click" Padding="10,5" Visibility="Collapsed" Margin="0,0,10,0"/>
+                    <Button x:Name="BtnCancelar" Content="Cancelar" Click="Cancelar_Click" Padding="10,5" Visibility="Collapsed"/>
+                </StackPanel>
+
+                <StackPanel x:Name="ProgressPanel" Margin="0,20,0,0" Visibility="Collapsed">
+                    <TextBlock x:Name="StatusText" Text="Aguarde..." Margin="0,0,0,5"/>
+                    <ProgressBar x:Name="ProgressBar" Height="20" IsIndeterminate="True"/>
+                </StackPanel>
             </StackPanel>
+        </Border>
 
-            <StackPanel x:Name="ProgressPanel" Margin="0,20,0,0" Visibility="Collapsed">
-                <TextBlock x:Name="StatusText" Text="Aguarde..." Margin="0,0,0,5"/>
-                <ProgressBar x:Name="ProgressBar" Height="20" IsIndeterminate="True"/>
-            </StackPanel>
-        </StackPanel>
-
-        <!-- List Panel -->
-        <DockPanel Grid.Column="1">
-            <TextBlock Text="Bingos Existentes" DockPanel.Dock="Top" FontSize="16" FontWeight="Bold" Margin="0,0,0,10"/>
-            <DataGrid x:Name="BingosGrid" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True">
-                <DataGrid.Columns>
-                    <DataGridTextColumn Header="Nome" Binding="{Binding Nome}" Width="*"/>
-                    <DataGridTextColumn Header="Data" Binding="{Binding DataInicioPrevista, StringFormat=d}" Width="100"/>
-                    <DataGridTextColumn Header="Combos" Binding="{Binding QuantidadeCombos}" Width="80"/>
-                    <DataGridTemplateColumn Header="Ações" Width="140">
-                        <DataGridTemplateColumn.CellTemplate>
-                            <DataTemplate>
-                                <StackPanel Orientation="Horizontal">
-                                    <Button Content="Editar" Click="EditarBingo_Click" Margin="2"/>
-                                    <Button Content="Excluir" Click="ExcluirBingo_Click" Margin="2" Background="#FF4444" Foreground="White"/>
-                                </StackPanel>
-                            </DataTemplate>
-                        </DataGridTemplateColumn.CellTemplate>
-                    </DataGridTemplateColumn>
-                </DataGrid.Columns>
-            </DataGrid>
-        </DockPanel>
+        <!-- List Panel (Card) -->
+        <Border Grid.Column="1" Background="{DynamicResource CardBackgroundBrush}" CornerRadius="8" Margin="10,0,0,0" Padding="20">
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="15" ShadowDepth="2" Opacity="0.1" Color="Black"/>
+            </Border.Effect>
+            <DockPanel>
+                <TextBlock Text="Bingos Existentes" DockPanel.Dock="Top" FontSize="16" FontWeight="Bold" Margin="0,0,0,10"/>
+                <DataGrid x:Name="BingosGrid" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Nome" Binding="{Binding Nome}" Width="*"/>
+                        <DataGridTextColumn Header="Data" Binding="{Binding DataInicioPrevista, StringFormat=d}" Width="100"/>
+                        <DataGridTextColumn Header="Combos" Binding="{Binding QuantidadeCombos}" Width="80"/>
+                        <DataGridTemplateColumn Header="Ações" Width="140">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Button Content="Editar" Click="EditarBingo_Click" Margin="2"/>
+                                        <Button Content="Excluir" Click="ExcluirBingo_Click" Margin="2" Background="#FF4444" Foreground="White"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </DockPanel>
+        </Border>
     </Grid>
 </UserControl>

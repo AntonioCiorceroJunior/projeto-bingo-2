@@ -1,0 +1,84 @@
+DOCUMENTAÇÃO DE FUNCIONALIDADES FUTURAS E AUTOMAÇÃO (BINGO ADMIN)
+===================================================================
+
+Este documento detalha o roteiro de implementação para tornar o Bingo Admin capaz de operar em modo 100% autônomo e sua integração futura com API e Bot de WhatsApp.
+
+1. MODO 100% AUTOMÁTICO (AUTOPILOT)
+-----------------------------------
+O objetivo é permitir que o operador configure o bingo, dê "Play" e o sistema gerencie todo o evento sozinho.
+
+A. Agendamento e Início Automático
+   - Funcionalidade: O usuário define Data e Hora de início do Bingo.
+   - Comportamento: Se o app estiver aberto, ele inicia a 1ª rodada automaticamente no horário agendado.
+   - Requisito: Serviço de background para verificar o horário do sistema.
+
+B. Gestão de Timers (Cronômetros)
+   O sistema deve possuir uma máquina de estados baseada em tempo:
+   
+   1. Timer de Sorteio (TGNS):
+      - Já existente (ex: 4s entre bolas).
+      - Melhoria: Exibir contagem regressiva visual para a próxima bola no Feed Global.
+   
+   2. Timer de "Ganhador Encontrado" (Pausa de Emoção):
+      - Quando alguém ganha: O sistema pausa o sorteio.
+      - Ação: Espera X segundos (ex: 15s) para celebração/conferência visual.
+      - Decisão Automática: Se não houver empate, encerra a rodada. Se houver empate (Pedra Maior), inicia o modo de desempate automático.
+
+   3. Timer de Intervalo entre Rodadas:
+      - Configuração: O usuário define o tempo padrão (ex: 5 min) entre o fim de uma rodada e o início da próxima.
+      - Visual: Contagem regressiva grande na tela "A próxima rodada começa em 04:59...".
+      - Ação: Ao zerar, o sistema seleciona a próxima rodada, reseta o painel e inicia o sorteio.
+
+C. Desempate Automático (Pedra Maior)
+   - Atualmente: Abre uma janela modal que bloqueia o fluxo.
+   - Futuro (Modo Auto): 
+     - O sistema detecta o empate.
+     - Exibe o status "Modo Pedra Maior" no Feed Global.
+     - Sorteia as pedras de desempate automaticamente.
+     - Identifica o vencedor final e encerra a rodada.
+
+2. INTERFACE GLOBAL (HUD / FEED)
+--------------------------------
+Para que o operador (ou a projeção) possa acompanhar o status independente da aba que esteja aberta.
+
+A. Componente de Overlay (Barra Superior ou Inferior Persistente)
+   - Deve estar visível em TODAS as abas (Configuração, Financeiro, etc) quando o modo automático estiver ativo.
+   - Informações Obrigatórias:
+     1. Status Atual: "Rodada 1 em Andamento" ou "Intervalo" ou "Desempate".
+     2. Padrão Atual: Ícone e Nome (ex: "Cartela Cheia").
+     3. Último Número: Exibição clara (ex: "B-12").
+     4. Timer: Contagem regressiva relevante para o momento atual.
+     5. Alerta de Ganhador: Piscar ou mudar de cor quando houver ganhador.
+
+3. INTEGRAÇÃO API E BOT WHATSAPP
+--------------------------------
+A API servirá como ponte entre o Bingo Admin (Desktop) e o mundo externo (WhatsApp/Web).
+
+A. Endpoints Necessários (Sugestão para API Futura)
+   - POST /api/bingo/start       -> Notifica início do evento.
+   - POST /api/rodada/start      -> Notifica início de rodada (envia padrão e prêmio).
+   - POST /api/sorteio/ball      -> Envia cada bola sorteada em tempo real (para atualizar webview ou bot).
+   - POST /api/rodada/winner     -> Envia dados do ganhador (Nome, Cartela, Foto se houver).
+   - POST /api/financeiro/resumo -> Envia relatório financeiro ao admin.
+
+B. Comportamentos do Bot (WhatsApp)
+   1. Envio de Cartelas:
+      - O usuário compra, o bot envia o PDF da cartela automaticamente.
+   
+   2. Narração do Jogo (Opcional/Configurável):
+      - "Começou a 1ª Rodada! Prêmio: R$ 500,00. Padrão: Linha."
+      - "BINGO! O ganhador foi João da Silva (Cartela 1054)."
+   
+   3. Relatórios:
+      - Ao final do evento, envia o PDF de "Resumo Financeiro" e "Lista de Ganhadores" para o grupo da administração.
+
+4. CHECKLIST DE IMPLEMENTAÇÃO TÉCNICA
+-------------------------------------
+[ ] Criar classe `AutoPilotManager` (Singleton) para gerenciar a máquina de estados do jogo.
+[ ] Implementar `GlobalOverlayView` no `MainWindow.xaml` (acima do `MainContent`).
+[ ] Criar configurações de tempo no banco de dados (`BingoConfig`).
+[ ] Desenvolver lógica de "Desempate sem Modal" para o modo automático.
+[ ] Mapear eventos do `GameService` para chamadas HTTP (preparação para API).
+
+===================================================================
+Este documento deve ser atualizado conforme novas ideias surgirem.

@@ -11,15 +11,21 @@ namespace BingoAdmin.Domain.Services
 
         public List<Combo> GerarCombos(int bingoId, int quantidadeCombos, int cartelasPorCombo)
         {
-            var combos = new List<Combo>();
-            var hashesExistentes = new HashSet<string>();
+            // Mantendo compatibilidade para chamadas simples, criando um HashSet novo
+            return GerarLoteCombos(bingoId, 1, quantidadeCombos, cartelasPorCombo, new HashSet<string>());
+        }
 
-            for (int i = 1; i <= quantidadeCombos; i++)
+        public List<Combo> GerarLoteCombos(int bingoId, int startCombo, int quantidade, int cartelasPorCombo, HashSet<string> hashesExistentes)
+        {
+            var combos = new List<Combo>();
+
+            for (int i = 0; i < quantidade; i++)
             {
+                int numeroComboAtual = startCombo + i;
                 var combo = new Combo
                 {
                     BingoId = bingoId,
-                    NumeroCombo = i,
+                    NumeroCombo = numeroComboAtual,
                     Status = "Disponivel",
                     Cartelas = new List<Cartela>()
                 };

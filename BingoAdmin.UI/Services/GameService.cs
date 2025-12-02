@@ -15,18 +15,26 @@ namespace BingoAdmin.UI.Services
         private HashSet<int> _ganhadoresIds = new();
         private Rodada? _rodadaAtual;
         private string _mascaraAtual = string.Empty;
+        private List<BingoPadrao> _padroesDinamicosAtivos = new();
         private Random _random = new Random();
+        private readonly FeedService _feedService;
+        private readonly GameStatusService _gameStatusService;
 
         public event Action<int>? OnNumeroSorteado;
         public event Action<List<GanhadorInfo>>? OnGanhadoresEncontrados;
+        public event Action<string>? OnPadraoDinamicoSorteado; // Evento para notificar UI
 
-        public GameService(BingoContext context)
+        public GameService(BingoContext context, FeedService feedService, GameStatusService gameStatusService)
         {
             _context = context;
+            _feedService = feedService;
+            _gameStatusService = gameStatusService;
         }
 
         public void CarregarDadosBingo(int bingoId)
         {
+            _feedService.SwitchBingoContext(bingoId);
+            // _feedService.AddMessage("Sistema", "Carregando dados do Bingo...", "Info"); // Reduced verbosity
             _cachedCartelas.Clear();
             var cartelas = _context.Cartelas
                 .Include(c => c.Combo)
@@ -56,14 +64,57 @@ namespace BingoAdmin.UI.Services
 
         public void IniciarRodada(int rodadaId)
         {
+            // _feedService.AddMessage("Rodada", $"Iniciando rodada {rodadaId}...", "Info"); // Reduced verbosity as requested
+            _gameStatusService.ClearRecentBalls();
+
             _rodadaAtual = _context.Rodadas
                 .Include(r => r.Padrao)
+                .Include(r => r.Bingo)
                 .FirstOrDefault(r => r.Id == rodadaId);
 
             if (_rodadaAtual == null) throw new Exception("Rodada não encontrada");
 
             // Se não tiver padrão (ex: rodada extra), assume cartela cheia (tudo 1)
             _mascaraAtual = _rodadaAtual.Padrao?.Mascara ?? new string('1', 25);
+            
+            // Carregar padrões dinâmicos se necessário (Agora verifica a flag da RODADA)
+            if (_rodadaAtual.ModoPadroesDinamicos)
+            {
+                // Tenta carregar padrões específicos da rodada
+                var padroesRodada = _context.RodadaPadroes
+                    .Include(rp => rp.Padrao)
+                    .Where(rp => rp.RodadaId == _rodadaAtual.Id && !rp.FoiSorteado)
+                    .Select(rp => new BingoPadrao 
+                    { 
+                        Id = rp.Id, // Note: This ID is from RodadaPadrao, but we map to BingoPadrao structure for compatibility or just use a common interface?
+                        // Actually _padroesDinamicosAtivos is List<BingoPadrao>. We should change it to a generic or specific DTO.
+                        // For now, let's map it manually or change the list type.
+                        // Changing the list type is better.
+                        Padrao = rp.Padrao,
+                        PadraoId = rp.PadraoId,
+                        FoiSorteado = rp.FoiSorteado,
+                        BingoId = 0 // Dummy
+                    })
+                    .ToList();
+
+                if (padroesRodada.Any())
+                {
+                    _padroesDinamicosAtivos = padroesRodada;
+                }
+                else
+                {
+                    // Fallback to global patterns if round patterns are empty (backward compatibility)
+                    _padroesDinamicosAtivos = _context.BingoPadroes
+                        .Include(bp => bp.Padrao)
+                        .Where(bp => bp.BingoId == _rodadaAtual.BingoId && !bp.FoiSorteado)
+                        .ToList();
+                }
+            }
+            else
+            {
+                _padroesDinamicosAtivos.Clear();
+            }
+
             _numerosSorteados.Clear();
             
             _ganhadoresIds = _context.Ganhadores
@@ -116,10 +167,52 @@ namespace BingoAdmin.UI.Services
             }
         }
 
+        public void AtualizarPadroesDinamicos()
+        {
+            if (_rodadaAtual == null || !_rodadaAtual.ModoPadroesDinamicos) return;
+
+            // Reload patterns from DB
+            var padroesRodada = _context.RodadaPadroes
+                .Include(rp => rp.Padrao)
+                .Where(rp => rp.RodadaId == _rodadaAtual.Id && !rp.FoiSorteado)
+                .Select(rp => new BingoPadrao 
+                { 
+                    Id = rp.Id, 
+                    Padrao = rp.Padrao,
+                    PadraoId = rp.PadraoId,
+                    FoiSorteado = rp.FoiSorteado,
+                    BingoId = 0 
+                })
+                .ToList();
+
+            if (padroesRodada.Any())
+            {
+                _padroesDinamicosAtivos = padroesRodada;
+            }
+            else
+            {
+                // Fallback to global patterns
+                _padroesDinamicosAtivos = _context.BingoPadroes
+                    .Include(bp => bp.Padrao)
+                    .Where(bp => bp.BingoId == _rodadaAtual.BingoId && !bp.FoiSorteado)
+                    .ToList();
+            }
+            
+            VerificarGanhadores();
+        }
+
         public int SortearNumero()
         {
-            if (_rodadaAtual == null) throw new Exception("Nenhuma rodada iniciada.");
-            if (_numerosSorteados.Count >= 75) throw new Exception("Todos os números já foram sorteados.");
+            if (_rodadaAtual == null) 
+            {
+                _feedService.AddMessage("Erro", "Tentativa de sorteio sem rodada iniciada.", "Error");
+                throw new Exception("Nenhuma rodada iniciada.");
+            }
+            if (_numerosSorteados.Count >= 75) 
+            {
+                _feedService.AddMessage("Erro", "Todos os números já foram sorteados.", "Error");
+                throw new Exception("Todos os números já foram sorteados.");
+            }
 
             int numero;
             do
@@ -128,6 +221,16 @@ namespace BingoAdmin.UI.Services
             } while (_numerosSorteados.Contains(numero));
 
             _numerosSorteados.Add(numero);
+            
+            string letter = "";
+            if (numero <= 15) letter = "B";
+            else if (numero <= 30) letter = "I";
+            else if (numero <= 45) letter = "N";
+            else if (numero <= 60) letter = "G";
+            else letter = "O";
+
+            _feedService.AddMessage("Sorteio", $"{letter} | {numero}", "Info");
+            _gameStatusService.AddRecentBall(numero);
 
             // Atualizar persistência
             var sorteio = _context.Sorteios.FirstOrDefault(s => s.RodadaId == _rodadaAtual.Id);
@@ -147,26 +250,88 @@ namespace BingoAdmin.UI.Services
         private void VerificarGanhadores()
         {
             var novosGanhadores = new List<GanhadorInfo>();
+            var padroesSorteadosNestaVerificacao = new HashSet<int>();
 
             foreach (var cartela in _cachedCartelas)
             {
                 if (_ganhadoresIds.Contains(cartela.Id)) continue;
 
-                if (VerificarCartela(cartela.Numeros))
+                // Se modo dinâmico, verifica contra todos os padrões ativos
+                if (_padroesDinamicosAtivos.Any())
                 {
-                    novosGanhadores.Add(new GanhadorInfo 
-                    { 
-                        CartelaId = cartela.Id, 
-                        ComboNumero = cartela.ComboNumero,
-                        NumeroCartela = cartela.NumeroCartela,
-                        NomeDono = cartela.Dono 
-                    });
+                    foreach (var bp in _padroesDinamicosAtivos)
+                    {
+                        // if (padroesSorteadosNestaVerificacao.Contains(bp.Id)) continue; // Permitir empate no mesmo padrão na mesma bola
+
+                        if (bp.Padrao == null) continue;
+
+                        if (VerificarMascara(cartela.Numeros, bp.Padrao.Mascara))
+                        {
+                            novosGanhadores.Add(new GanhadorInfo 
+                            { 
+                                CartelaId = cartela.Id, 
+                                ComboNumero = cartela.ComboNumero,
+                                NumeroCartela = cartela.NumeroCartela,
+                                NomeDono = cartela.Dono,
+                                NomePadrao = bp.Padrao.Nome // Adicionar info do padrão ganho
+                            });
+                            
+                            // Marcar padrão como sorteado
+                            bp.FoiSorteado = true;
+                            
+                            // Check if it's a RodadaPadrao (mapped manually) or BingoPadrao
+                            // Since we mapped manually in IniciarRodada, the entity state tracking might be lost or confused.
+                            // We need to update the correct table.
+                            
+                            if (bp.BingoId == 0) // It's a RodadaPadrao mapped
+                            {
+                                var rp = _context.RodadaPadroes.Find(bp.Id);
+                                if (rp != null) 
+                                {
+                                    rp.FoiSorteado = true;
+                                    _context.Entry(rp).State = EntityState.Modified;
+                                }
+                            }
+                            else // It's a BingoPadrao (Global)
+                            {
+                                _context.Entry(bp).State = EntityState.Modified;
+                            }
+
+                            padroesSorteadosNestaVerificacao.Add(bp.Id);
+                            OnPadraoDinamicoSorteado?.Invoke(bp.Padrao.Nome);
+                        }
+                    }
                 }
+                else
+                {
+                    // Modo clássico
+                    if (VerificarMascara(cartela.Numeros, _mascaraAtual))
+                    {
+                        novosGanhadores.Add(new GanhadorInfo 
+                        { 
+                            CartelaId = cartela.Id, 
+                            ComboNumero = cartela.ComboNumero,
+                            NumeroCartela = cartela.NumeroCartela,
+                            NomeDono = cartela.Dono 
+                        });
+                    }
+                }
+            }
+
+            if (padroesSorteadosNestaVerificacao.Any())
+            {
+                _context.SaveChanges();
+                // Remover da lista em memória
+                _padroesDinamicosAtivos.RemoveAll(x => padroesSorteadosNestaVerificacao.Contains(x.Id));
             }
 
             if (novosGanhadores.Any())
             {
-                foreach(var g in novosGanhadores) _ganhadoresIds.Add(g.CartelaId);
+                foreach(var g in novosGanhadores) 
+                {
+                    _ganhadoresIds.Add(g.CartelaId);
+                    _feedService.AddMessage("BINGO!", $"Ganhador: Combo {g.ComboNumero} - Cartela {g.NumeroCartela} ({g.NomePadrao})", "Success");
+                }
 
                 OnGanhadoresEncontrados?.Invoke(novosGanhadores);
                 SalvarGanhadores(novosGanhadores);
@@ -175,10 +340,15 @@ namespace BingoAdmin.UI.Services
 
         private bool VerificarCartela(int[] numerosCartela)
         {
+            return VerificarMascara(numerosCartela, _mascaraAtual);
+        }
+
+        private bool VerificarMascara(int[] numerosCartela, string mascara)
+        {
             // Check for "X na louca" pattern (RANDOM:X)
-            if (_mascaraAtual.StartsWith("RANDOM:"))
+            if (mascara.StartsWith("RANDOM:"))
             {
-                if (int.TryParse(_mascaraAtual.Substring(7), out int requiredCount))
+                if (int.TryParse(mascara.Substring(7), out int requiredCount))
                 {
                     int hitCount = 0;
                     for (int i = 0; i < 25; i++)
@@ -196,10 +366,9 @@ namespace BingoAdmin.UI.Services
 
             for (int i = 0; i < 25; i++)
             {
-                if (_mascaraAtual.Length > i && _mascaraAtual[i] == '1')
+                if (mascara.Length > i && mascara[i] == '1')
                 {
                     int numeroNaPosicao = numerosCartela[i];
-                    // 0 é considerado espaço livre (já marcado)
                     if (numeroNaPosicao != 0 && !_numerosSorteados.Contains(numeroNaPosicao))
                     {
                         return false;
@@ -302,6 +471,23 @@ namespace BingoAdmin.UI.Services
         {
             return _cachedCartelas.FirstOrDefault(c => c.Id == cartelaId);
         }
+
+        public void SetModoDinamico(bool ativo)
+        {
+            if (_rodadaAtual != null)
+            {
+                _rodadaAtual.ModoPadroesDinamicos = ativo;
+                if (ativo)
+                {
+                    AtualizarPadroesDinamicos();
+                }
+                else
+                {
+                    _padroesDinamicosAtivos.Clear();
+                }
+                VerificarGanhadores();
+            }
+        }
     }
 
     public class CachedCartela
@@ -319,5 +505,6 @@ namespace BingoAdmin.UI.Services
         public int ComboNumero { get; set; }
         public int NumeroCartela { get; set; }
         public string NomeDono { get; set; } = string.Empty;
+        public string NomePadrao { get; set; } = string.Empty; // Adicionado para armazenar o nome do padrão dinâmico, se aplicável
     }
 }

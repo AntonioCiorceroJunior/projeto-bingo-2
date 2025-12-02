@@ -12,6 +12,7 @@ namespace BingoAdmin.UI.Views
         private readonly RodadaService _rodadaService;
         private readonly ComboService _comboService; // Reusing to get Bingos
         private readonly PadraoService _padraoService;
+        private readonly BingoContextService _bingoContext;
 
         public RodadasConfigView()
         {
@@ -22,14 +23,40 @@ namespace BingoAdmin.UI.Views
             _rodadaService = services.GetRequiredService<RodadaService>();
             _comboService = services.GetRequiredService<ComboService>();
             _padraoService = services.GetRequiredService<PadraoService>();
+            _bingoContext = services.GetRequiredService<BingoContextService>();
 
             LoadBingos();
             LoadPadroes();
+            _bingoContext.OnBingoChanged += OnGlobalBingoChanged;
+        }
+
+        private void OnGlobalBingoChanged(int bingoId)
+        {
+            if (BingoSelector.SelectedItem is Bingo current && current.Id == bingoId) return;
+
+            var bingos = BingoSelector.ItemsSource as System.Collections.Generic.List<Bingo>;
+            var target = System.Linq.Enumerable.FirstOrDefault(bingos, b => b.Id == bingoId);
+            if (target != null)
+            {
+                BingoSelector.SelectedItem = target;
+            }
         }
 
         private void LoadBingos()
         {
-            BingoSelector.ItemsSource = _comboService.GetBingos();
+            var bingos = _comboService.GetBingos();
+            BingoSelector.ItemsSource = bingos;
+            
+            if (_bingoContext.CurrentBingoId != -1)
+            {
+                var target = System.Linq.Enumerable.FirstOrDefault(bingos, b => b.Id == _bingoContext.CurrentBingoId);
+                if (target != null)
+                {
+                    BingoSelector.SelectedItem = target;
+                    return;
+                }
+            }
+
             if (BingoSelector.Items.Count > 0) BingoSelector.SelectedIndex = 0;
         }
 
@@ -45,7 +72,11 @@ namespace BingoAdmin.UI.Views
 
         private void BingoSelector_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            LoadRodadas();
+            if (BingoSelector.SelectedItem is Bingo selectedBingo)
+            {
+                _bingoContext.SetCurrentBingo(selectedBingo.Id);
+                LoadRodadas();
+            }
         }
 
         private void RefreshButton_Click(object sender, RoutedEventArgs e)

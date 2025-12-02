@@ -35,7 +35,20 @@ Este documento rastreia a evolução do projeto BingoAdmin, detalhando as funcio
     - **Curva de Velocidade**: Começa devagar, acelera para alta velocidade, e desacelera gradualmente até parar no vencedor.
     - Feedback visual com destaque (highlight) e indicação clara do vencedor.
 
+### 5. Reformulação de UI e Feed (Atual)
+- **Contexto Global**: Implementação do `BingoContextService` para sincronizar a seleção do Bingo entre todas as abas.
+- **Feed Avançado**:
+  - **Interatividade**: Itens do feed agora são expansíveis (clique para ver detalhes).
+  - **Histórico**: Persistência de logs e capacidade de recarregar histórico por Bingo.
+  - **Layout**: Painel lateral dividido em seções funcionais.
+- **Dashboard Dashboard**:
+  - **Status do Jogo**: Visualização de cronômetros (Sorteio Automático/Regressiva) no topo do painel.
+  - **Últimos Sorteios**: Nova seção dedicada exibindo as últimas bolas sorteadas em formato visual (`B | 05`).
+- **Correções Técnicas**:
+  - Substituição de propriedades inválidas (`MaxLines` -> `MaxHeight`) no XAML.
+  - Refatoração de serviços para suportar injeção de dependência circular (via propriedades ou inicialização tardia).
+
 ## Estado Atual
-- Branch atual: `homol`
+- Branch atual: `homol_1.1v`
 - O projeto está funcional com todos os módulos acima integrados.
 - A interface utiliza `UniformGrid` para layouts de sorteio e `DataTriggers` para animações visuais.
