@@ -11,9 +11,12 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.1" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.0" />
+    <PackageReference Include="QRCoder" Version="1.7.0" />
     <PackageReference Include="QuestPDF" Version="2025.7.4" />
+    <PackageReference Include="System.Speech" Version="10.0.0" />
   </ItemGroup>
 
   <PropertyGroup>
@@ -23,5 +26,11 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Update="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
 
 </Project>

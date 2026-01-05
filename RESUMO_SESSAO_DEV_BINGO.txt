@@ -1,0 +1,47 @@
+RESUMO DA SESSÃO DE DESENVOLVIMENTO (BINGO ADMIN)
+Data: 05/01/2026
+Status: Módulo "Show" (Visual/Áudio) Finalizado. Próximo: Painel "Por Uma Bola".
+
+1. ALTERAÇÕES REALIZADAS (CRÍTICAS)
+===================================
+
+A. CORREÇÃO DE LÓGICA (PEDRA MAIOR)
+   - Problema: Em caso de empate, o sistema marcava todos os participantes como vencedores finais.
+   - Solução: Implementado `GameService.RemoverGanhador`.
+   - Fluxo: O sistema detecta o empate -> Abre Janela -> Usuário define vencedor -> Ao fechar, o sistema remove automaticamente os perdedores da lista de ganhadores e do banco.
+
+B. ÁUDIO (GOOGLE TTS)
+   - Problema: Voz do Windows era robótica.
+   - Solução: Substituído por Google Translate TTS.
+   - Técnica: O sistema baixa o MP3 da frase (ex: "B 12") para a pasta `/TempAudio` e reproduz. Se falhar (offline), usa Windows como fallback.
+
+C. INTERFACE DA TV (FLASHBOARD)
+   - Título da Rodada: Agora exibe "Xª RODADA - [PRÊMIO]" no topo direito.
+   - Feed de Atividades:
+     - Adicionado separador visual (linha branca) entre rodadas.
+     - Adicionada mensagem de destaque "Início Rodada X" em dourado.
+     - Filtro ajustado para mostrar apenas Vitórias, Pedra Maior e Separadores.
+
+D. UX DO OPERADOR
+   - Alertas: `MessageBox` agora são vinculados à janela principal (`Owner`), impedindo que apareçam na TV/Projetor.
+   - Ordem de Eventos: O Overlay de Vencedor aparece na TV *antes* do pop-up travar a tela do operador.
+
+2. ESTADO ATUAL DO CÓDIGO
+=========================
+- O projeto compila sem erros.
+- A lógica de desempate está robusta.
+- A integração visual TV/Operador está sincronizada.
+
+3. PRÓXIMOS PASSOS (IMEDIATOS)
+==============================
+1. Implementar Painel "Por Uma Bola" (Heatmap):
+   - Monitorar quantas cartelas faltam 1 número.
+   - Exibir na tela do operador para gerar tensão na locução.
+
+2. Implementar API de Vendas (WhatsApp):
+   - Documentação atualizada em `DOCUMENTACAO_AUTOMACAO_API.txt`.
+   - Criar projeto ASP.NET Core para rodar junto com o WPF.
+
+4. COMO CONTINUAR
+=================
+Ao abrir o novo chat, peça: "Leia o arquivo RESUMO_SESSAO_DEV_BINGO.txt e vamos implementar o Painel Por Uma Bola".

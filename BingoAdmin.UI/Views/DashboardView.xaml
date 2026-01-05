@@ -84,6 +84,9 @@
             <TabItem Header="Relatórios">
                 <local:RelatoriosView/>
             </TabItem>
+            <TabItem x:Name="AdminTab" Header="Admin Users" Visibility="Collapsed">
+                <local:UsuariosView/>
+            </TabItem>
         </TabControl>
 
         <!-- Global Feed -->

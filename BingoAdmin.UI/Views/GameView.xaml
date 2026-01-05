@@ -81,16 +81,54 @@
                 <Button x:Name="BtnSortear" Content="SORTEAR NÚMERO" Click="BtnSortear_Click" Height="60" FontSize="20" FontWeight="Bold" Background="#5AB86F" Foreground="White" Margin="0,0,0,10"/>
 
                 <!-- Auto Draw Controls -->
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,20">
-                    <Border Background="Transparent" ToolTip="Tempo de Geração de Números Sorteados" Cursor="Help" VerticalAlignment="Center">
-                        <TextBlock Text="TGNS:" FontWeight="Bold"/>
-                    </Border>
-                    <TextBox x:Name="TxtTgns" Text="4" Width="40" Margin="5,0,5,0" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" TextChanged="TxtTgns_TextChanged"/>
-                    <TextBlock Text="seg" VerticalAlignment="Center" Margin="0,0,15,0"/>
-                    
-                    <Button x:Name="BtnIniciarAuto" Content="▶ Iniciar" Click="BtnIniciarAuto_Click" Margin="0,0,5,0" Padding="10,2" Background="#5AB86F" Foreground="White"/>
-                    <Button x:Name="BtnPausarAuto" Content="⏸ Pausar" Click="BtnPausarAuto_Click" Padding="10,2" Background="#ffc107" Foreground="Black" IsEnabled="False"/>
+                <StackPanel Margin="0,0,0,20">
+                    <!-- Row 1: Settings -->
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,10">
+                        <Border Background="Transparent" ToolTip="Tempo de Geração de Números Sorteados" Cursor="Help" VerticalAlignment="Center">
+                            <TextBlock Text="TGNS:" FontWeight="Bold"/>
+                        </Border>
+                        
+                        <Button x:Name="BtnDecreaseInterval" Content="-" Width="25" Height="25" Margin="5,0,0,0" Click="BtnDecreaseInterval_Click" Background="#DDDDDD"/>
+                        <TextBlock x:Name="TxtTgnsDisplay" Text="4.0" Width="35" VerticalAlignment="Center" TextAlignment="Center" FontWeight="Bold"/>
+                        <Button x:Name="BtnIncreaseInterval" Content="+" Width="25" Height="25" Margin="0,0,5,0" Click="BtnIncreaseInterval_Click" Background="#DDDDDD"/>
+                        
+                        <TextBlock Text="seg" VerticalAlignment="Center" Margin="0,0,15,0"/>
+                        
+                        <CheckBox x:Name="ChkLocucao" Content="🔊 Locução" IsChecked="True" Checked="ChkLocucao_CheckedChanged" Unchecked="ChkLocucao_CheckedChanged" VerticalAlignment="Center"/>
+                    </StackPanel>
+
+                    <!-- Row 2: Actions -->
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                        <Button x:Name="BtnIniciarAuto" Content="▶ Iniciar" Click="BtnIniciarAuto_Click" Margin="0,0,5,0" Padding="20,5" Background="#5AB86F" Foreground="White"/>
+                        <Button x:Name="BtnPausarAuto" Content="⏸ Pausar" Click="BtnPausarAuto_Click" Padding="20,5" Background="#ffc107" Foreground="Black" IsEnabled="False"/>
+                    </StackPanel>
                 </StackPanel>
+
+                <!-- Por Uma Bola Panel -->
+                <Border Background="#FFF3E0" BorderBrush="#FFB74D" BorderThickness="2" CornerRadius="8" Padding="10" Margin="0,0,0,20" x:Name="PanelPorUmaBola" Visibility="Collapsed">
+                    <StackPanel>
+                        <TextBlock Text="🔥 POR UMA BOLA 🔥" HorizontalAlignment="Center" FontWeight="Bold" Foreground="#E65100" FontSize="16"/>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,5,0,0">
+                            <TextBlock Text="Cartelas na espera:" FontWeight="SemiBold" Foreground="#E65100"/>
+                            <TextBlock x:Name="TxtTotalPorUma" Text="0" FontWeight="Bold" Margin="5,0,0,0" Foreground="#E65100" FontSize="14"/>
+                        </StackPanel>
+                        <TextBlock Text="Números mais esperados:" FontWeight="SemiBold" Margin="0,5,0,2" Foreground="#E65100"/>
+                        <ItemsControl x:Name="ListNumerosEsperados">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel HorizontalAlignment="Center"/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="#E65100" CornerRadius="4" Margin="2" Padding="5,2">
+                                        <TextBlock Text="{Binding}" Foreground="White" FontWeight="Bold" FontSize="12"/>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
 
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
                     <TextBlock Text="Histórico (Tempo Real):" FontWeight="Bold" VerticalAlignment="Center"/>

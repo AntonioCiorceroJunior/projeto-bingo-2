@@ -11,39 +11,73 @@
             <Setter Property="FontFamily" Value="Segoe UI"/>
             <Setter Property="Foreground" Value="White"/>
         </Style>
+
+        <!-- Colors -->
+        <SolidColorBrush x:Key="ColorB" Color="#007ACC"/>
+        <SolidColorBrush x:Key="ColorI" Color="#D32F2F"/>
+        <SolidColorBrush x:Key="ColorN" Color="#FFFFFF"/>
+        <SolidColorBrush x:Key="ColorG" Color="#388E3C"/>
+        <SolidColorBrush x:Key="ColorO" Color="#FBC02D"/>
         
-        <!-- Style for Board Numbers -->
-        <Style x:Key="BoardNumberStyle" TargetType="Border">
-            <Setter Property="Background" Value="#222"/>
-            <Setter Property="Margin" Value="2"/>
-            <Setter Property="CornerRadius" Value="5"/>
-            <Style.Triggers>
-                <DataTrigger Binding="{Binding IsDrawn}" Value="True">
-                    <Setter Property="Background" Value="#00FF00"/> <!-- Bright Green for drawn -->
-                </DataTrigger>
-            </Style.Triggers>
-        </Style>
-        
-        <Style x:Key="BoardTextStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="24"/>
-            <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="HorizontalAlignment" Value="Center"/>
-            <Setter Property="VerticalAlignment" Value="Center"/>
-            <Setter Property="Foreground" Value="#555"/>
-            <Style.Triggers>
-                <DataTrigger Binding="{Binding IsDrawn}" Value="True">
-                    <Setter Property="Foreground" Value="Black"/>
-                </DataTrigger>
-            </Style.Triggers>
-        </Style>
-        
+        <!-- Converters -->
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+
+        <!-- Template for Board Numbers -->
+        <DataTemplate x:Key="BoardNumberTemplate">
+            <Border Margin="2" CornerRadius="4">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="Background" Value="Transparent"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsDrawn}" Value="True">
+                                <Setter Property="Background" Value="{Binding RelativeSource={RelativeSource AncestorType=ItemsControl}, Path=Tag}"/>
+                                <Setter Property="Effect">
+                                    <Setter.Value>
+                                        <DropShadowEffect Color="{Binding RelativeSource={RelativeSource AncestorType=ItemsControl}, Path=Tag.Color}" BlurRadius="10" ShadowDepth="0" Opacity="0.8"/>
+                                    </Setter.Value>
+                                </Setter>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <Viewbox>
+                    <TextBlock Text="{Binding Numero}" FontWeight="Bold" Margin="5">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Foreground" Value="#333333"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsDrawn}" Value="True">
+                                        <Setter Property="Foreground" Value="White"/>
+                                    </DataTrigger>
+                                    <!-- Special case for N and O columns (Light backgrounds) -->
+                                    <MultiDataTrigger>
+                                        <MultiDataTrigger.Conditions>
+                                            <Condition Binding="{Binding IsDrawn}" Value="True"/>
+                                            <Condition Binding="{Binding RelativeSource={RelativeSource AncestorType=ItemsControl}, Path=Tag.Color}" Value="#FFFFFF"/>
+                                        </MultiDataTrigger.Conditions>
+                                        <Setter Property="Foreground" Value="Black"/>
+                                    </MultiDataTrigger>
+                                    <MultiDataTrigger>
+                                        <MultiDataTrigger.Conditions>
+                                            <Condition Binding="{Binding IsDrawn}" Value="True"/>
+                                            <Condition Binding="{Binding RelativeSource={RelativeSource AncestorType=ItemsControl}, Path=Tag.Color}" Value="#FBC02D"/>
+                                        </MultiDataTrigger.Conditions>
+                                        <Setter Property="Foreground" Value="Black"/>
+                                    </MultiDataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                </Viewbox>
+            </Border>
+        </DataTemplate>
+
     </Window.Resources>
 
     <Grid Margin="20">
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*"/> <!-- Left: Board -->
-            <ColumnDefinition Width="350"/> <!-- Right: Current Number & Pattern -->
+            <ColumnDefinition Width="65*"/> <!-- Left: Board (65%) -->
+            <ColumnDefinition Width="35*"/> <!-- Right: Info (35%) -->
         </Grid.ColumnDefinitions>
 
         <!-- Left Side: The Full Board -->
@@ -51,16 +85,15 @@
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/> <!-- Header B I N G O -->
                 <RowDefinition Height="*"/>    <!-- Numbers -->
-                <RowDefinition Height="Auto"/> <!-- Feed Area (Optional) -->
             </Grid.RowDefinitions>
 
             <!-- B I N G O Headers -->
             <UniformGrid Rows="1" Columns="5" Margin="0,0,0,10">
-                <Border Background="{DynamicResource HeaderBackgroundBrush}" Margin="2" CornerRadius="5"><TextBlock Text="B" FontSize="40" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="White"/></Border>
-                <Border Background="{DynamicResource HeaderBackgroundBrush}" Margin="2" CornerRadius="5"><TextBlock Text="I" FontSize="40" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="White"/></Border>
-                <Border Background="{DynamicResource HeaderBackgroundBrush}" Margin="2" CornerRadius="5"><TextBlock Text="N" FontSize="40" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="White"/></Border>
-                <Border Background="{DynamicResource HeaderBackgroundBrush}" Margin="2" CornerRadius="5"><TextBlock Text="G" FontSize="40" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="White"/></Border>
-                <Border Background="{DynamicResource HeaderBackgroundBrush}" Margin="2" CornerRadius="5"><TextBlock Text="O" FontSize="40" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="White"/></Border>
+                <Border Background="{StaticResource ColorB}" Margin="2" CornerRadius="5"><TextBlock Text="B" FontSize="40" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="White"/></Border>
+                <Border Background="{StaticResource ColorI}" Margin="2" CornerRadius="5"><TextBlock Text="I" FontSize="40" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="White"/></Border>
+                <Border Background="{StaticResource ColorN}" Margin="2" CornerRadius="5"><TextBlock Text="N" FontSize="40" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Black"/></Border>
+                <Border Background="{StaticResource ColorG}" Margin="2" CornerRadius="5"><TextBlock Text="G" FontSize="40" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="White"/></Border>
+                <Border Background="{StaticResource ColorO}" Margin="2" CornerRadius="5"><TextBlock Text="O" FontSize="40" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Black"/></Border>
             </UniformGrid>
 
             <!-- Numbers Grid -->
@@ -73,186 +106,285 @@
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
 
-                <ItemsControl Grid.Column="0" ItemsSource="{Binding ColumnB}">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <UniformGrid Rows="15" Columns="1"/>
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <Border Style="{StaticResource BoardNumberStyle}">
-                                <Viewbox>
-                                    <TextBlock Text="{Binding Numero}" Style="{StaticResource BoardTextStyle}" Margin="5"/>
-                                </Viewbox>
-                            </Border>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
+                <!-- Column B -->
+                <ItemsControl Grid.Column="0" ItemsSource="{Binding ColumnB}" ItemTemplate="{StaticResource BoardNumberTemplate}" Tag="{StaticResource ColorB}">
+                    <ItemsControl.ItemsPanel><ItemsPanelTemplate><UniformGrid Rows="15" Columns="1"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                 </ItemsControl>
 
-                <ItemsControl Grid.Column="1" ItemsSource="{Binding ColumnI}">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <UniformGrid Rows="15" Columns="1"/>
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <Border Style="{StaticResource BoardNumberStyle}">
-                                <Viewbox>
-                                    <TextBlock Text="{Binding Numero}" Style="{StaticResource BoardTextStyle}" Margin="5"/>
-                                </Viewbox>
-                            </Border>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
+                <!-- Column I -->
+                <ItemsControl Grid.Column="1" ItemsSource="{Binding ColumnI}" ItemTemplate="{StaticResource BoardNumberTemplate}" Tag="{StaticResource ColorI}">
+                    <ItemsControl.ItemsPanel><ItemsPanelTemplate><UniformGrid Rows="15" Columns="1"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                 </ItemsControl>
 
-                <ItemsControl Grid.Column="2" ItemsSource="{Binding ColumnN}">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <UniformGrid Rows="15" Columns="1"/>
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <Border Style="{StaticResource BoardNumberStyle}">
-                                <Viewbox>
-                                    <TextBlock Text="{Binding Numero}" Style="{StaticResource BoardTextStyle}" Margin="5"/>
-                                </Viewbox>
-                            </Border>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
+                <!-- Column N -->
+                <ItemsControl Grid.Column="2" ItemsSource="{Binding ColumnN}" ItemTemplate="{StaticResource BoardNumberTemplate}" Tag="{StaticResource ColorN}">
+                    <ItemsControl.ItemsPanel><ItemsPanelTemplate><UniformGrid Rows="15" Columns="1"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                 </ItemsControl>
 
-                <ItemsControl Grid.Column="3" ItemsSource="{Binding ColumnG}">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <UniformGrid Rows="15" Columns="1"/>
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <Border Style="{StaticResource BoardNumberStyle}">
-                                <Viewbox>
-                                    <TextBlock Text="{Binding Numero}" Style="{StaticResource BoardTextStyle}" Margin="5"/>
-                                </Viewbox>
-                            </Border>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
+                <!-- Column G -->
+                <ItemsControl Grid.Column="3" ItemsSource="{Binding ColumnG}" ItemTemplate="{StaticResource BoardNumberTemplate}" Tag="{StaticResource ColorG}">
+                    <ItemsControl.ItemsPanel><ItemsPanelTemplate><UniformGrid Rows="15" Columns="1"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                 </ItemsControl>
 
-                <ItemsControl Grid.Column="4" ItemsSource="{Binding ColumnO}">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <UniformGrid Rows="15" Columns="1"/>
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <Border Style="{StaticResource BoardNumberStyle}">
-                                <Viewbox>
-                                    <TextBlock Text="{Binding Numero}" Style="{StaticResource BoardTextStyle}" Margin="5"/>
-                                </Viewbox>
-                            </Border>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
+                <!-- Column O -->
+                <ItemsControl Grid.Column="4" ItemsSource="{Binding ColumnO}" ItemTemplate="{StaticResource BoardNumberTemplate}" Tag="{StaticResource ColorO}">
+                    <ItemsControl.ItemsPanel><ItemsPanelTemplate><UniformGrid Rows="15" Columns="1"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                 </ItemsControl>
             </Grid>
-
-            <!-- Feed Area on TV -->
-            <Border Grid.Row="2" Margin="0,20,0,0" Background="#333" CornerRadius="10" Padding="15" 
-                    Visibility="{Binding GameStatus.IsFeedVisibleOnTv, Converter={StaticResource BoolToVis}}">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="150"/>
-                    </Grid.RowDefinitions>
-                    <TextBlock Text="Últimas Atividades" FontSize="18" FontWeight="Bold" Margin="0,0,0,10" Foreground="#AAA"/>
-                    <ListBox Grid.Row="1" ItemsSource="{Binding FeedMessages}" Background="Transparent" BorderThickness="0" ScrollViewer.VerticalScrollBarVisibility="Hidden">
-                        <ListBox.ItemTemplate>
-                            <DataTemplate>
-                                <Grid Margin="0,2">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Text="{Binding FormattedTime}" Foreground="#888" Margin="0,0,10,0" FontSize="14"/>
-                                    <TextBlock Grid.Column="1" Text="{Binding Message}" Foreground="White" TextWrapping="Wrap" FontSize="16"/>
-                                </Grid>
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
-                </Grid>
-            </Border>
         </Grid>
 
         <!-- Right Side: Current Number & Info -->
         <Grid Grid.Column="1">
             <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/> <!-- Current Number -->
-                <RowDefinition Height="*"/>    <!-- Pattern -->
-                <RowDefinition Height="Auto"/> <!-- Marquee/Message -->
+                <RowDefinition Height="35*"/> <!-- Current Number (Increased) -->
+                <RowDefinition Height="65*"/> <!-- Content Area -->
             </Grid.RowDefinitions>
 
             <!-- Current Number Display -->
-            <Border Grid.Row="0" Background="#111" BorderBrush="{DynamicResource PrimaryBrush}" BorderThickness="5" CornerRadius="20" Height="300" Margin="0,0,0,20">
-                <Viewbox>
-                    <StackPanel>
-                        <TextBlock Text="ÚLTIMO" Foreground="Gray" HorizontalAlignment="Center" Margin="0,10,0,0"/>
-                        <TextBlock x:Name="TxtCurrentNumber" Text="--" FontWeight="Bold" Foreground="{DynamicResource PrimaryBrush}" HorizontalAlignment="Center"/>
-                    </StackPanel>
-                </Viewbox>
-            </Border>
+            <Grid Grid.Row="0" Margin="0,0,0,20">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
 
-            <!-- Pattern Display -->
-            <Border Grid.Row="1" Background="#222" CornerRadius="10" Padding="10">
+                <TextBlock Grid.Row="0" Text="{Binding GameStatus.CurrentRoundTitle}" FontSize="24" FontWeight="Bold" Foreground="#FFD700" HorizontalAlignment="Center" Margin="0,0,0,10" TextAlignment="Center" TextWrapping="Wrap"/>
+                
+                <Border Grid.Row="1" Background="#111" BorderBrush="#333" BorderThickness="1" CornerRadius="20">
+                    <Grid>
+                        <TextBlock Text="ÚLTIMO SORTEIO" Foreground="#666" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,15,0,0" FontSize="18" FontWeight="Bold"/>
+                        <Viewbox Margin="20,45,20,20">
+                            <TextBlock x:Name="TxtCurrentNumber" Text="--" FontWeight="Bold" Foreground="White">
+                                <TextBlock.Effect>
+                                    <DropShadowEffect Color="White" BlurRadius="20" ShadowDepth="0" Opacity="0.5"/>
+                                </TextBlock.Effect>
+                            </TextBlock>
+                        </Viewbox>
+                    </Grid>
+                </Border>
+            </Grid>
+
+            <!-- Content Area: Normal Mode vs Pedra Maior Mode -->
+            <Grid Grid.Row="1">
+                
+                <!-- NORMAL MODE -->
                 <Grid>
+                    <Grid.Style>
+                        <Style TargetType="Grid">
+                            <Setter Property="Visibility" Value="Visible"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding GameStatus.IsPedraMaiorActive}" Value="True">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Grid.Style>
                     <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/> <!-- History Label -->
+                        <RowDefinition Height="Auto"/> <!-- History List -->
+                        <RowDefinition Height="35*"/> <!-- Pattern -->
+                        <RowDefinition Height="40*"/> <!-- Feed -->
                     </Grid.RowDefinitions>
-                    
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,10">
-                        <TextBlock Text="PADRÕES ATIVOS" FontSize="20" FontWeight="Bold" Foreground="White" VerticalAlignment="Center"/>
-                        <Border Background="{DynamicResource PrimaryBrush}" CornerRadius="10" Padding="8,2" Margin="10,0,0,0" VerticalAlignment="Center">
-                            <TextBlock Text="{Binding ActivePatterns.Count, StringFormat='{}{0} Ativos'}" Foreground="White" FontWeight="Bold" FontSize="14"/>
-                        </Border>
-                    </StackPanel>
 
-                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                        <ItemsControl ItemsSource="{Binding ActivePatterns}">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <WrapPanel Orientation="Horizontal" HorizontalAlignment="Center"/>
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <StackPanel Margin="10">
-                                        <TextBlock Text="{Binding Name}" HorizontalAlignment="Center" FontSize="16" Foreground="#AAA" Margin="0,0,0,5" TextWrapping="Wrap" MaxWidth="200" TextAlignment="Center"/>
-                                        <ItemsControl ItemsSource="{Binding GridCells}">
-                                            <ItemsControl.ItemsPanel>
-                                                <ItemsPanelTemplate>
-                                                    <UniformGrid Rows="5" Columns="5" Width="150" Height="150"/>
-                                                </ItemsPanelTemplate>
-                                            </ItemsControl.ItemsPanel>
-                                            <ItemsControl.ItemTemplate>
-                                                <DataTemplate>
-                                                    <Border Background="{Binding}" Margin="1" CornerRadius="2"/>
-                                                </DataTemplate>
-                                            </ItemsControl.ItemTemplate>
-                                        </ItemsControl>
-                                    </StackPanel>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </ScrollViewer>
+                    <!-- History Label -->
+                    <TextBlock Grid.Row="0" Text="ÚLTIMAS BOLAS" Foreground="#888" FontSize="16" FontWeight="Bold" Margin="5,0,0,5"/>
+
+                    <!-- History List -->
+                    <ItemsControl Grid.Row="1" ItemsSource="{Binding LastCalls}" Margin="0,0,0,20">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left"/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="#222" CornerRadius="5" Margin="0,0,10,0" Padding="15,10" MinWidth="60">
+                                    <TextBlock Text="{Binding}" Foreground="White" FontSize="24" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <!-- Pattern Display -->
+                    <Border Grid.Row="2" Background="#151515" CornerRadius="10" Padding="15" Margin="0,0,0,20">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            
+                            <TextBlock Text="PADRÃO ATUAL" FontSize="18" FontWeight="Bold" Foreground="#AAA" HorizontalAlignment="Center" Margin="0,0,0,15"/>
+
+                            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                <ItemsControl ItemsSource="{Binding ActivePatterns}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <WrapPanel Orientation="Horizontal" HorizontalAlignment="Center"/>
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Margin="15">
+                                                <ItemsControl ItemsSource="{Binding GridCells}">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <UniformGrid Rows="5" Columns="5" Width="120" Height="120"/>
+                                                        </ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Border Background="{Binding}" Margin="2" CornerRadius="3"/>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                                <TextBlock Text="{Binding Name}" HorizontalAlignment="Center" FontSize="16" FontWeight="SemiBold" Foreground="White" Margin="0,10,0,0" TextWrapping="Wrap" MaxWidth="150" TextAlignment="Center"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                        </Grid>
+                    </Border>
+
+                    <!-- Feed Area -->
+                    <Border Grid.Row="3" Background="#151515" CornerRadius="10" Padding="15" 
+                            Visibility="{Binding GameStatus.IsFeedVisibleOnTv, Converter={StaticResource BoolToVis}}">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <TextBlock Text="ATIVIDADES" FontSize="18" FontWeight="Bold" Margin="0,0,0,10" Foreground="#AAA"/>
+                            <ListBox Grid.Row="1" ItemsSource="{Binding FeedMessagesView}" Background="Transparent" BorderThickness="0" ScrollViewer.VerticalScrollBarVisibility="Hidden">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid>
+                                            <!-- Normal Message -->
+                                            <Grid Margin="0,2">
+                                                <Grid.Style>
+                                                    <Style TargetType="Grid">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding Type}" Value="Separator">
+                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding Type}" Value="RoundTitle">
+                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Grid.Style>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Text="{Binding FormattedTime}" Foreground="#888" Margin="0,0,10,0" FontSize="14"/>
+                                                <TextBlock Grid.Column="1" Text="{Binding Message}" Foreground="White" TextWrapping="Wrap" FontSize="16"/>
+                                            </Grid>
+
+                                            <!-- Round Title Message -->
+                                            <Grid Margin="0,10">
+                                                <Grid.Style>
+                                                    <Style TargetType="Grid">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding Type}" Value="RoundTitle">
+                                                                <Setter Property="Visibility" Value="Visible"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Grid.Style>
+                                                <TextBlock Text="{Binding Message}" Foreground="#FFD700" FontWeight="Bold" FontSize="18" HorizontalAlignment="Center"/>
+                                            </Grid>
+
+                                            <!-- Separator -->
+                                            <Border Height="2" Background="White" Margin="0,10" Opacity="0.5">
+                                                <Border.Style>
+                                                    <Style TargetType="Border">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding Type}" Value="Separator">
+                                                                <Setter Property="Visibility" Value="Visible"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Border.Style>
+                                            </Border>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </Grid>
+                    </Border>
                 </Grid>
-            </Border>
-            
-            <!-- Marquee Placeholder -->
-            <Border Grid.Row="2" Background="#333" Margin="0,20,0,0" Padding="10" CornerRadius="5">
-                <TextBlock Text="BOA SORTE A TODOS!" FontSize="20" FontWeight="Bold" Foreground="Yellow" HorizontalAlignment="Center"/>
+
+                <!-- PEDRA MAIOR MODE -->
+                <Border Background="#220000" CornerRadius="10" Padding="20" Visibility="{Binding GameStatus.IsPedraMaiorActive, Converter={StaticResource BoolToVis}}">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Text="DISPUTA: PEDRA MAIOR" FontSize="28" FontWeight="Bold" Foreground="#FF5555" HorizontalAlignment="Center" Margin="0,0,0,20">
+                            <TextBlock.Effect>
+                                <DropShadowEffect Color="Red" BlurRadius="20" ShadowDepth="0"/>
+                            </TextBlock.Effect>
+                        </TextBlock>
+
+                        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                            <ItemsControl ItemsSource="{Binding GameStatus.PedraMaiorParticipants}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Background="#331111" Margin="0,5" Padding="15" CornerRadius="5">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                
+                                                <StackPanel VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding Nome}" FontSize="22" FontWeight="Bold" Foreground="White"/>
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Text="Cartela: " Foreground="#AAA" FontSize="16"/>
+                                                        <TextBlock Text="{Binding NumeroCartela}" Foreground="#FFF" FontSize="16" FontWeight="Bold"/>
+                                                    </StackPanel>
+                                                </StackPanel>
+
+                                                <Border Grid.Column="1" Background="#550000" CornerRadius="5" Width="80" Height="80" VerticalAlignment="Center">
+                                                    <Viewbox>
+                                                        <TextBlock Text="{Binding PedraSorteada, TargetNullValue='?'}" FontWeight="Bold" Foreground="White" Margin="5"/>
+                                                    </Viewbox>
+                                                </Border>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </Grid>
+                </Border>
+
+            </Grid>
+        </Grid>
+
+        <!-- Winner Overlay -->
+        <Grid Grid.ColumnSpan="2" Visibility="{Binding GameStatus.IsWinnerOverlayVisible, Converter={StaticResource BoolToVis}}" Panel.ZIndex="999">
+            <Border Background="#E6000000"/> <!-- Darker Semi-transparent background -->
+            <Border Background="#FFD700" BorderBrush="White" BorderThickness="8" CornerRadius="30" HorizontalAlignment="Center" VerticalAlignment="Center" Padding="50" MaxWidth="900">
+                <Border.Effect>
+                    <DropShadowEffect Color="Black" BlurRadius="100" ShadowDepth="0"/>
+                </Border.Effect>
+                <StackPanel>
+                    <TextBlock Text="🏆" FontSize="80" HorizontalAlignment="Center" Margin="0,0,0,10"/>
+                    <TextBlock Text="{Binding GameStatus.WinnerOverlayTitle}" FontSize="72" FontWeight="Black" Foreground="#B22222" HorizontalAlignment="Center" TextAlignment="Center" Margin="0,0,0,20">
+                        <TextBlock.Effect>
+                            <DropShadowEffect Color="White" BlurRadius="10" ShadowDepth="3" Opacity="0.5"/>
+                        </TextBlock.Effect>
+                    </TextBlock>
+                    <TextBlock Text="{Binding GameStatus.WinnerOverlayMessage}" FontSize="48" FontWeight="Bold" Foreground="#111" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" LineHeight="60"/>
+                    
+                    <TextBlock Text="🎉 PARABÉNS! 🎉" FontSize="36" FontWeight="Bold" Foreground="#B22222" HorizontalAlignment="Center" Margin="0,40,0,0"/>
+                </StackPanel>
             </Border>
         </Grid>
     </Grid>

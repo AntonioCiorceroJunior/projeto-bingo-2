@@ -63,7 +63,7 @@
                 <DataGridTemplateColumn Width="120">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
-                            <TextBlock Text="&lt;- GANHADORA" Foreground="Gray" Visibility="{Binding IsWinner, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                            <TextBlock Text="&lt;- GANHADORA" Visibility="{Binding IsWinner, Converter={StaticResource BooleanToVisibilityConverter}}"/>
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>

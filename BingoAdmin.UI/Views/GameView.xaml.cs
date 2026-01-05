@@ -22,11 +22,13 @@ namespace BingoAdmin.UI.Views
         private readonly BingoContextService _bingoContext = null!;
         private readonly GameStatusService _gameStatusService = null!;
         private readonly FeedService _feedService = null!;
+        private readonly ISpeechService _speechService = null!;
         
         private DispatcherTimer _autoDrawTimer;
         private DispatcherTimer _countdownTimer; // For visual countdown
         private DateTime _nextDrawTime;
         private FlashboardWindow? _flashboardWindow;
+        private double _currentIntervalSeconds = 4.0;
 
         public ObservableCollection<BoardNumber> ColumnB { get; set; } = new ObservableCollection<BoardNumber>();
         public ObservableCollection<BoardNumber> ColumnI { get; set; } = new ObservableCollection<BoardNumber>();
@@ -51,6 +53,7 @@ namespace BingoAdmin.UI.Views
             _bingoContext = ((App)Application.Current).Host.Services.GetRequiredService<BingoContextService>();
             _gameStatusService = ((App)Application.Current).Host.Services.GetRequiredService<GameStatusService>();
             _feedService = ((App)Application.Current).Host.Services.GetRequiredService<FeedService>();
+            _speechService = ((App)Application.Current).Host.Services.GetRequiredService<ISpeechService>();
 
             InitializeBoard();
             InitializeAutoDrawTimer();
@@ -58,6 +61,8 @@ namespace BingoAdmin.UI.Views
             // Set DataContext to self so we can bind to properties
             this.DataContext = this;
             
+            ChkLocucao.IsChecked = _speechService.IsEnabled;
+
             ListGanhadores.ItemsSource = Ganhadores;
             ListGanhadores.MouseDoubleClick += ListGanhadores_MouseDoubleClick;
             
@@ -71,6 +76,7 @@ namespace BingoAdmin.UI.Views
             _gameService.OnNumeroSorteado += OnNumeroSorteado;
             _gameService.OnGanhadoresEncontrados += OnGanhadoresEncontrados;
             _gameService.OnRodadaEncerrada += OnRodadaEncerrada;
+            _gameService.OnPorUmaBolaAtualizado += OnPorUmaBolaAtualizado;
             _bingoContext.OnBingoChanged += OnGlobalBingoChanged;
             _bingoContext.OnBingoListUpdated += OnBingoListUpdated;
         }
@@ -107,7 +113,7 @@ namespace BingoAdmin.UI.Views
         {
             _autoDrawTimer = new DispatcherTimer();
             _autoDrawTimer.Tick += AutoDrawTimer_Tick;
-            _autoDrawTimer.Interval = TimeSpan.FromSeconds(4); // Default
+            _autoDrawTimer.Interval = TimeSpan.FromSeconds(_currentIntervalSeconds);
 
             _countdownTimer = new DispatcherTimer();
             _countdownTimer.Interval = TimeSpan.FromMilliseconds(100);
@@ -162,12 +168,21 @@ namespace BingoAdmin.UI.Views
             
             BtnIniciarAuto.IsEnabled = false;
             BtnPausarAuto.IsEnabled = true;
-            TxtTgns.IsEnabled = false; // Lock interval while running
+            BtnDecreaseInterval.IsEnabled = false;
+            BtnIncreaseInterval.IsEnabled = false;
         }
 
         private void BtnPausarAuto_Click(object sender, RoutedEventArgs e)
         {
             StopAutoDraw();
+        }
+
+        private void ChkLocucao_CheckedChanged(object sender, RoutedEventArgs e)
+        {
+            if (_speechService != null)
+            {
+                _speechService.IsEnabled = ChkLocucao.IsChecked ?? false;
+            }
         }
 
         private void StopAutoDraw()
@@ -180,7 +195,8 @@ namespace BingoAdmin.UI.Views
 
             BtnIniciarAuto.IsEnabled = true;
             BtnPausarAuto.IsEnabled = false;
-            TxtTgns.IsEnabled = true;
+            BtnDecreaseInterval.IsEnabled = true;
+            BtnIncreaseInterval.IsEnabled = true;
         }
 
         private void BtnCompartilharHistorico_Click(object sender, RoutedEventArgs e)
@@ -188,18 +204,32 @@ namespace BingoAdmin.UI.Views
             MessageBox.Show("Integração com WhatsApp em breve!", "Compartilhar", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
-        private void TxtTgns_TextChanged(object sender, TextChangedEventArgs e)
+        private void BtnDecreaseInterval_Click(object sender, RoutedEventArgs e)
         {
-            UpdateTimerInterval();
+            if (_currentIntervalSeconds > 2.0)
+            {
+                _currentIntervalSeconds -= 0.5;
+                UpdateTimerInterval();
+            }
+        }
+
+        private void BtnIncreaseInterval_Click(object sender, RoutedEventArgs e)
+        {
+            if (_currentIntervalSeconds < 15.0)
+            {
+                _currentIntervalSeconds += 0.5;
+                UpdateTimerInterval();
+            }
         }
 
         private void UpdateTimerInterval()
         {
-            if (_autoDrawTimer == null) return;
+            TxtTgnsDisplay.Text = _currentIntervalSeconds.ToString("F1", System.Globalization.CultureInfo.InvariantCulture);
 
-            if (int.TryParse(TxtTgns.Text, out int seconds) && seconds > 0)
+            if (_autoDrawTimer != null)
             {
-                _autoDrawTimer.Interval = TimeSpan.FromSeconds(seconds);
+                _autoDrawTimer.Interval = TimeSpan.FromSeconds(_currentIntervalSeconds);
+                _speechService.UpdateDrawInterval(_currentIntervalSeconds);
             }
         }
 
@@ -391,6 +421,12 @@ namespace BingoAdmin.UI.Views
             BtnSortear.IsEnabled = true;
             StopAutoDraw();
             
+            // Update Round Title on TV
+            string tipo = rodada.TipoPremio;
+            if (string.IsNullOrEmpty(tipo)) tipo = rodada.TipoJogo ?? "BINGO";
+            
+            _gameStatusService.CurrentRoundTitle = $"{rodada.NumeroOrdem}ª RODADA - {tipo.ToUpper()}";
+
             // Reset Flashboard
             _flashboardWindow?.ResetBoard();
 
@@ -463,6 +499,7 @@ namespace BingoAdmin.UI.Views
                 // Load data without "starting" logic (just view)
                 _gameService.CarregarDadosBingo(rodada.BingoId);
                 _gameService.IniciarRodada(rodada.Id); // This loads state into service
+                _gameService.RefreshPorUmaBolaStats();
                 
                 var sorteados = _gameService.GetNumerosSorteados();
                 
@@ -528,6 +565,7 @@ namespace BingoAdmin.UI.Views
                     // Force status update in local object to reflect DB change
                     display.Rodada.Status = "EmAndamento";
                     _gameStatusService.IsGameRunning = true;
+                    PanelPorUmaBola.Visibility = Visibility.Collapsed;
                     UpdateUIForSelectedRodada(display.Rodada);
                     
                     MessageBox.Show($"Rodada '{display.Rodada.NumeroOrdem}ª Rodada' iniciada!");
@@ -602,7 +640,7 @@ namespace BingoAdmin.UI.Views
                 if (_autoDrawTimer.IsEnabled)
                 {
                     StopAutoDraw();
-                    MessageBox.Show("Ganhador(es) encontrado(s)! O sorteio automático foi pausado.", "Bingo", MessageBoxButton.OK, MessageBoxImage.Information);
+                    MessageBox.Show(Window.GetWindow(this), "Ganhador(es) encontrado(s)! O sorteio automático foi pausado.", "Bingo", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
 
                 if (ganhadores.Count > 1)
@@ -614,18 +652,28 @@ namespace BingoAdmin.UI.Views
                     }
 
                     var window = new PedraMaiorWindow(ganhadores);
+                    window.Owner = Window.GetWindow(this);
                     if (window.ShowDialog() == true)
                     {
                         // Salvar resultados do desempate
                         if (RodadaSelector.SelectedItem is RodadaDisplay currentDisplay)
                         {
                             var resultados = window.Items.Select(i => (
-                                CartelaId: i.OriginalInfo.CartelaId,
+                                CartelaId: ((GanhadorInfo)i.OriginalInfo!).CartelaId,
                                 NumeroSorteado: i.PedraSorteada ?? 0,
                                 IsVencedor: i.IsWinner
                             )).ToList();
                             
                             _desempateService.SalvarSorteioPedraMaiorEmLote(currentDisplay.Rodada.Id, resultados);
+                        }
+
+                        // Remove losers from GameService (and DB)
+                        foreach (var item in window.Items)
+                        {
+                            if (!item.IsWinner && item.OriginalInfo is GanhadorInfo info)
+                            {
+                                _gameService.RemoverGanhador(info.CartelaId);
+                            }
                         }
 
                         var winnerItem = window.GetWinnerItem();
@@ -634,9 +682,22 @@ namespace BingoAdmin.UI.Views
                             string msg = $"GANHADOR: {winnerItem.Nome}, Combo {winnerItem.ComboNumero}, Cartela {winnerItem.NumeroCartela} - Pedra Maior: {winnerItem.PedraSorteada}";
                             if (!Ganhadores.Any(g => g.Texto == msg))
                             {
-                                Ganhadores.Add(new GanhadorDisplay { Texto = msg, Info = winnerItem.OriginalInfo });
+                                Ganhadores.Add(new GanhadorDisplay { Texto = msg, Info = (GanhadorInfo)winnerItem.OriginalInfo! });
                                 _feedService.AddMessage("Pedra Maior - Vencedor", $"Ganhador: {winnerItem.Nome}, Combo {winnerItem.ComboNumero}, Cartela {winnerItem.NumeroCartela} (Pedra: {winnerItem.PedraSorteada})", "Success");
-                                MessageBox.Show(msg, "TEMOS UM VENCEDOR NO DESEMPATE!", MessageBoxButton.OK, MessageBoxImage.Exclamation);
+                                
+                                // Show Overlay
+                                _gameStatusService.WinnerOverlayTitle = "VENCEDOR(A)!";
+                                _gameStatusService.WinnerOverlayMessage = $"{winnerItem.Nome}\nCartela: {winnerItem.NumeroCartela}\nPedra: {winnerItem.PedraSorteada}";
+                                _gameStatusService.IsWinnerOverlayVisible = true;
+
+                                // Defer MessageBox to allow UI update on secondary screen
+                                Dispatcher.InvokeAsync(() => 
+                                {
+                                    MessageBox.Show(Window.GetWindow(this), msg, "VENCEDOR(A)!", MessageBoxButton.OK, MessageBoxImage.Exclamation);
+                                    
+                                    // Hide Overlay
+                                    _gameStatusService.IsWinnerOverlayVisible = false;
+                                }, System.Windows.Threading.DispatcherPriority.Background);
                             }
                         }
                     }
@@ -653,8 +714,48 @@ namespace BingoAdmin.UI.Views
                     if (!Ganhadores.Any(gd => gd.Texto == msg))
                     {
                         Ganhadores.Add(new GanhadorDisplay { Texto = msg, Info = g });
-                        MessageBox.Show(msg, "TEMOS UM GANHADOR!", MessageBoxButton.OK, MessageBoxImage.Exclamation);
+                        _feedService.AddMessage("BINGO!", msg, "Success");
+                        
+                        // Show Overlay
+                        _gameStatusService.WinnerOverlayTitle = "GANHADOR(A)!";
+                        _gameStatusService.WinnerOverlayMessage = $"{g.NomeDono}\nCartela: {g.NumeroCartela}\nCombo: {g.ComboNumero}";
+                        _gameStatusService.IsWinnerOverlayVisible = true;
+
+                        // Defer MessageBox to allow UI update on secondary screen
+                        Dispatcher.InvokeAsync(() => 
+                        {
+                            MessageBox.Show(Window.GetWindow(this), msg, "GANHADOR(A)!", MessageBoxButton.OK, MessageBoxImage.Exclamation);
+                            
+                            // Hide Overlay
+                            _gameStatusService.IsWinnerOverlayVisible = false;
+                        }, System.Windows.Threading.DispatcherPriority.Background);
                     }
+                }
+            });
+        }
+
+        private void OnPorUmaBolaAtualizado(PorUmaBolaStats stats)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                if (stats.TotalCartelasPorUma > 0)
+                {
+                    PanelPorUmaBola.Visibility = Visibility.Visible;
+                    TxtTotalPorUma.Text = stats.TotalCartelasPorUma.ToString();
+                    
+                    // Show top 10 most expected numbers
+                    var topNumbers = stats.NumerosMaisEsperados
+                        .OrderByDescending(x => x.Value)
+                        .ThenBy(x => x.Key)
+                        .Take(10)
+                        .Select(x => x.Key)
+                        .ToList();
+                        
+                    ListNumerosEsperados.ItemsSource = topNumbers;
+                }
+                else
+                {
+                    PanelPorUmaBola.Visibility = Visibility.Collapsed;
                 }
             });
         }
@@ -675,13 +776,21 @@ namespace BingoAdmin.UI.Views
                 // Auto-advance to next round if available
                 if (RodadaSelector.SelectedIndex < RodadaSelector.Items.Count - 1)
                 {
+                    var nextIndex = RodadaSelector.SelectedIndex + 1;
+                    if (RodadaSelector.Items[nextIndex] is RodadaDisplay nextRound)
+                    {
+                        _feedService.AddMessage("Início Rodada", $"{nextRound.Rodada.NumeroOrdem}ª Rodada", "RoundTitle");
+                        _feedService.AddSeparator();
+                    }
                     RodadaSelector.SelectedIndex++;
                 }
                 else
                 {
+                    _feedService.AddSeparator();
                     // Just update UI for current finished round
                     if (RodadaSelector.SelectedItem is RodadaDisplay display)
                     {
+                        
                         UpdateUIForSelectedRodada(display.Rodada);
                     }
                 }
@@ -706,18 +815,23 @@ namespace BingoAdmin.UI.Views
                     // Auto-advance to next round if available
                     if (RodadaSelector.SelectedIndex < RodadaSelector.Items.Count - 1)
                     {
+                        var nextIndex = RodadaSelector.SelectedIndex + 1;
+                        if (RodadaSelector.Items[nextIndex] is RodadaDisplay nextRound)
+                        {
+                            _feedService.AddMessage("Início Rodada", $"{nextRound.Rodada.NumeroOrdem}ª Rodada", "RoundTitle");
+                            _feedService.AddSeparator();
+                        }
                         RodadaSelector.SelectedIndex++;
                     }
                     else
                     {
+                        _feedService.AddSeparator();
                         // Just update UI for current finished round
                         if (RodadaSelector.SelectedItem is RodadaDisplay display)
                         {
                             UpdateUIForSelectedRodada(display.Rodada);
                         }
-                    }
-
-                    MessageBox.Show("Rodada encerrada com sucesso!");
+                    }                    MessageBox.Show("Rodada encerrada com sucesso!");
                 }
                 catch (Exception ex)
                 {
@@ -746,6 +860,7 @@ namespace BingoAdmin.UI.Views
                     Ganhadores.Clear();
                     HistoricoSorteio.Clear();
                     TxtUltimoNumero.Text = "--";
+                    PanelPorUmaBola.Visibility = Visibility.Collapsed;
                     StopAutoDraw();
                     
                     // Refresh UI state (buttons visibility etc)

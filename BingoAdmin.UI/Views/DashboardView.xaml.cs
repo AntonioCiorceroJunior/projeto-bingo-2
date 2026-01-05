@@ -10,20 +10,33 @@ namespace BingoAdmin.UI.Views
     {
         private readonly FeedService _feedService;
         private readonly GameStatusService _gameStatusService;
+        private readonly UserSession _userSession;
 
         public ObservableCollection<FeedMessage> FeedMessages => _feedService.Messages;
         public GameStatusService GameStatus => _gameStatusService;
 
-        public DashboardView(FeedService feedService)
+        public DashboardView(FeedService feedService, UserSession userSession)
         {
             InitializeComponent();
             _feedService = feedService;
+            _userSession = userSession;
             _gameStatusService = ((App)Application.Current).Host.Services.GetRequiredService<GameStatusService>();
             
             DataContext = this;
 
-            // Add a welcome message
-            _feedService.AddMessage("Sistema", "Bem-vindo ao Bingo Admin 2.0", "Info");
+            // Welcome Message
+            var userName = _userSession.CurrentUser?.Nome ?? "Usuário";
+            _feedService.AddMessage("Sistema", $"Bem-vindo, {userName}!", "Info");
+
+            // Toggle Admin Tab
+            if (_userSession.IsAdmin)
+            {
+                AdminTab.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                AdminTab.Visibility = Visibility.Collapsed;
+            }
         }
 
         private void BtnClearFeed_Click(object sender, RoutedEventArgs e)

@@ -6,29 +6,60 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using BingoAdmin.UI.Services;
+using BingoAdmin.UI.ViewModels;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace BingoAdmin.UI.Views
 {
     public partial class PedraMaiorWindow : Window
     {
-        public ObservableCollection<PedraMaiorItem> Items { get; set; } = new ObservableCollection<PedraMaiorItem>();
+        public ObservableCollection<PedraMaiorItemViewModel> Items { get; set; } = new ObservableCollection<PedraMaiorItemViewModel>();
         private Random _random = new Random();
+        private GameStatusService? _gameStatusService;
 
         public PedraMaiorWindow(List<GanhadorInfo> ganhadores)
         {
             InitializeComponent();
+            
+            if (Application.Current is App app)
+            {
+                _gameStatusService = app.Host.Services.GetService<GameStatusService>();
+            }
+
             GridGanhadores.ItemsSource = Items;
 
+            // Initialize Items
             foreach (var g in ganhadores)
             {
-                Items.Add(new PedraMaiorItem
+                Items.Add(new PedraMaiorItemViewModel
                 {
                     Nome = g.NomeDono,
-                    ComboNumero = g.ComboNumero,
-                    NumeroCartela = g.NumeroCartela,
+                    ComboNumero = g.ComboNumero.ToString(),
+                    NumeroCartela = g.NumeroCartela.ToString(),
                     NomePadrao = g.NomePadrao,
                     OriginalInfo = g
                 });
+            }
+
+            // Sync with GameStatusService
+            if (_gameStatusService != null)
+            {
+                _gameStatusService.PedraMaiorParticipants.Clear();
+                foreach (var item in Items)
+                {
+                    _gameStatusService.PedraMaiorParticipants.Add(item);
+                }
+                _gameStatusService.IsPedraMaiorActive = true;
+            }
+        }
+
+        protected override void OnClosed(EventArgs e)
+        {
+            base.OnClosed(e);
+            if (_gameStatusService != null)
+            {
+                _gameStatusService.IsPedraMaiorActive = false;
+                _gameStatusService.PedraMaiorParticipants.Clear();
             }
         }
 
@@ -73,9 +104,6 @@ namespace BingoAdmin.UI.Views
             
             BtnSortear.Visibility = Visibility.Collapsed;
             BtnFechar.Visibility = Visibility.Visible;
-            
-            // Force refresh if needed (though INotifyPropertyChanged handles it)
-            // GridGanhadores.Items.Refresh();
         }
 
         private void BtnFechar_Click(object sender, RoutedEventArgs e)
@@ -84,49 +112,14 @@ namespace BingoAdmin.UI.Views
             this.Close();
         }
 
-        public GanhadorInfo GetWinner()
+        public GanhadorInfo? GetWinner()
         {
-            return Items.FirstOrDefault(i => i.IsWinner)?.OriginalInfo;
+            return Items.FirstOrDefault(i => i.IsWinner)?.OriginalInfo as GanhadorInfo;
         }
 
-        public PedraMaiorItem GetWinnerItem()
+        public PedraMaiorItemViewModel? GetWinnerItem()
         {
             return Items.FirstOrDefault(i => i.IsWinner);
         }
-    }
-
-    public class PedraMaiorItem : INotifyPropertyChanged
-    {
-        public string Nome { get; set; }
-        public int ComboNumero { get; set; }
-        public int NumeroCartela { get; set; }
-        public string NomePadrao { get; set; } = string.Empty;
-        
-        private int? _pedraSorteada;
-        public int? PedraSorteada 
-        { 
-            get => _pedraSorteada;
-            set
-            {
-                _pedraSorteada = value;
-                OnPropertyChanged(nameof(PedraSorteada));
-            }
-        }
-
-        private bool _isWinner;
-        public bool IsWinner 
-        { 
-            get => _isWinner;
-            set
-            {
-                _isWinner = value;
-                OnPropertyChanged(nameof(IsWinner));
-            }
-        }
-
-        public GanhadorInfo OriginalInfo { get; set; }
-
-        public event PropertyChangedEventHandler? PropertyChanged;
-        protected void OnPropertyChanged(string name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
 }

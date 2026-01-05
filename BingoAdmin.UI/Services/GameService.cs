@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using BingoAdmin.Domain.Entities;
 using BingoAdmin.Infra.Data;
 using Microsoft.EntityFrameworkCore;
@@ -20,6 +21,7 @@ namespace BingoAdmin.UI.Services
         private readonly FeedService _feedService;
         private readonly GameStatusService _gameStatusService;
         private readonly BingoContextService _bingoContextService;
+        private readonly ISpeechService _speechService;
         
         public bool ModoUnicoAtivo { get; set; } = false;
 
@@ -28,13 +30,15 @@ namespace BingoAdmin.UI.Services
         public event Action<string>? OnPadraoDinamicoSorteado; // Evento para notificar UI
         public event Action? OnRodadaReiniciada; // Evento para notificar UI que a rodada foi reiniciada
         public event Action? OnRodadaEncerrada; // Evento para notificar UI que a rodada foi encerrada automaticamente
+        public event Action<PorUmaBolaStats>? OnPorUmaBolaAtualizado; // Evento para notificar UI sobre estatísticas "Por Uma Bola"
 
-        public GameService(BingoContext context, FeedService feedService, GameStatusService gameStatusService, BingoContextService bingoContextService)
+        public GameService(BingoContext context, FeedService feedService, GameStatusService gameStatusService, BingoContextService bingoContextService, ISpeechService speechService)
         {
             _context = context;
             _feedService = feedService;
             _gameStatusService = gameStatusService;
             _bingoContextService = bingoContextService;
+            _speechService = speechService;
         }
 
         public void CarregarDadosBingo(int bingoId)
@@ -290,6 +294,7 @@ namespace BingoAdmin.UI.Services
 
             // _feedService.AddMessage("Sorteio", $"{letter} | {numero}", "Info");
             _gameStatusService.AddRecentBall(numero);
+            _speechService.SpeakBall(letter, numero);
 
             // Atualizar persistência
             var sorteio = _context.Sorteios.FirstOrDefault(s => s.RodadaId == _rodadaAtual.Id);
@@ -303,7 +308,56 @@ namespace BingoAdmin.UI.Services
             OnNumeroSorteado?.Invoke(numero);
             VerificarGanhadores();
 
+            // Calcular estatísticas "Por Uma Bola" após verificar ganhadores
+            var stats = CalcularStatsPorUmaBola();
+            OnPorUmaBolaAtualizado?.Invoke(stats);
+
+            // Verificar se deve anunciar o número mais esperado
+            VerificarLocucaoPorUmaBola(stats);
+
             return numero;
+        }
+
+        private void VerificarLocucaoPorUmaBola(PorUmaBolaStats stats)
+        {
+            if (stats.TotalCartelasPorUma > 0 && stats.NumerosMaisEsperados.Any())
+            {
+                // Encontrar o número mais esperado
+                var topNumber = stats.NumerosMaisEsperados.OrderByDescending(x => x.Value).First();
+                
+                // Lógica para não falar toda hora (ex: apenas se tiver mais de 3 pessoas esperando o mesmo número, ou aleatoriamente)
+                // Vamos usar uma probabilidade de 20% para não ficar repetitivo, ou se tiver muita gente (ex: > 5)
+                
+                bool deveFalar = false;
+                if (topNumber.Value >= 5) deveFalar = true; // Muita gente esperando, fala sempre (ou quase)
+                else if (_random.Next(0, 10) < 2) deveFalar = true; // 20% de chance para números com menos espera
+
+                if (deveFalar)
+                {
+                    // Evitar falar se acabou de falar (poderíamos ter um timer, mas por enquanto vamos confiar no aleatório)
+                    // Frase: "Temos X pessoas esperando pelo número Y... Quem será que irá ganhar?"
+                    string frase = $"Temos {topNumber.Value} pessoas esperando pelo número {topNumber.Key}... Quem será que irá ganhar?";
+                    
+                    // Usar um método específico no SpeechService para não cortar o número sorteado imediatamente se possível,
+                    // mas como o SpeakBall já foi chamado, ele vai enfileirar ou tocar depois?
+                    // O SpeechService atual usa StopAllAudio() no Speak(). Isso cortaria o número sorteado.
+                    // Precisamos melhorar o SpeechService ou chamar isso com atraso.
+                    
+                    // Como o SpeakBall usa MCI ou GoogleTTS e o Speak usa GoogleTTS com StopAllAudio, 
+                    // se chamarmos Speak agora, ele vai cortar o "B 5".
+                    // O ideal é que o SpeakBall seja prioritário e essa frase venha depois.
+                    
+                    // Vamos tentar chamar o Speak, mas sabendo que pode cortar. 
+                    // O ideal seria o SpeechService ter uma fila.
+                    // Por enquanto, vamos apenas chamar e ver se o usuário aceita, ou melhor, vamos fazer um Task.Delay
+                    
+                    Task.Run(async () => 
+                    {
+                        await Task.Delay(3000); // Espera 3 segundos (tempo para falar a bola)
+                        _speechService.Speak(frase);
+                    });
+                }
+            }
         }
 
         private void VerificarGanhadores()
@@ -520,6 +574,7 @@ namespace BingoAdmin.UI.Services
             {
                 // Pedra Maior (Empate)
                 _feedService.AddMessage("Bingo! - Pedra Maior", "Ganhadores:", "PedraMaior");
+                _speechService.Speak($"Temos um empate! {novosGanhadores.Count} ganhadores encontrados. Vamos para a Pedra Maior.");
                 foreach(var g in novosGanhadores) 
                 {
                     _ganhadoresIds.Add(g.CartelaId);
@@ -532,6 +587,7 @@ namespace BingoAdmin.UI.Services
                 {
                     _ganhadoresIds.Add(g.CartelaId);
                     _feedService.AddMessage("BINGO!", $"Ganhador: {g.NomeDono}, Combo {g.ComboNumero}, Cartela {g.NumeroCartela}", "Success");
+                    _speechService.SpeakWinner(g.NomeDono);
                 }
             }
 
@@ -606,6 +662,114 @@ namespace BingoAdmin.UI.Services
             }
         }
 
+        public void RefreshPorUmaBolaStats()
+        {
+            if (_rodadaAtual == null) return;
+            var stats = CalcularStatsPorUmaBola();
+            OnPorUmaBolaAtualizado?.Invoke(stats);
+        }
+
+        public PorUmaBolaStats CalcularStatsPorUmaBola()
+        {
+            var stats = new PorUmaBolaStats();
+            
+            foreach (var cartela in _cachedCartelas)
+            {
+                if (_ganhadoresIds.Contains(cartela.Id)) continue;
+
+                bool cardIsOneAway = false;
+                var waitingNumbersForThisCard = new HashSet<int>();
+
+                if (_padroesDinamicosAtivos.Any())
+                {
+                    foreach (var bp in _padroesDinamicosAtivos)
+                    {
+                        if (bp.Padrao == null) continue;
+                        var (missingCount, missingNums) = GetMissingNumbers(cartela.Numeros, bp.Padrao.Mascara);
+                        if (missingCount == 1)
+                        {
+                            cardIsOneAway = true;
+                            foreach(var n in missingNums) waitingNumbersForThisCard.Add(n);
+                        }
+                    }
+                }
+                else
+                {
+                    var (missingCount, missingNums) = GetMissingNumbers(cartela.Numeros, _mascaraAtual);
+                    if (missingCount == 1)
+                    {
+                        cardIsOneAway = true;
+                        foreach(var n in missingNums) waitingNumbersForThisCard.Add(n);
+                    }
+                }
+
+                if (cardIsOneAway)
+                {
+                    stats.TotalCartelasPorUma++;
+                    foreach(var n in waitingNumbersForThisCard)
+                    {
+                        if (!stats.NumerosMaisEsperados.ContainsKey(n))
+                            stats.NumerosMaisEsperados[n] = 0;
+                        stats.NumerosMaisEsperados[n]++;
+                    }
+                }
+            }
+            
+            return stats;
+        }
+
+        private (int count, List<int> numbers) GetMissingNumbers(int[] numerosCartela, string mascara)
+        {
+             var missingNumbers = new List<int>();
+             // Check for "X na louca" pattern (RANDOM:X)
+            if (mascara.StartsWith("RANDOM:"))
+            {
+                if (int.TryParse(mascara.Substring(7), out int requiredCount))
+                {
+                    int hitCount = 0;
+                    var undrawnNumbers = new List<int>();
+                    
+                    for (int i = 0; i < 25; i++)
+                    {
+                        int numeroNaPosicao = numerosCartela[i];
+                        if (numeroNaPosicao == 0) 
+                        {
+                            hitCount++; // Free space counts as hit
+                        }
+                        else if (_numerosSorteados.Contains(numeroNaPosicao))
+                        {
+                            hitCount++;
+                        }
+                        else
+                        {
+                            undrawnNumbers.Add(numeroNaPosicao);
+                        }
+                    }
+                    
+                    int missing = Math.Max(0, requiredCount - hitCount);
+                    
+                    if (missing == 1)
+                    {
+                        return (1, undrawnNumbers);
+                    }
+                    return (missing, new List<int>());
+                }
+            }
+
+            for (int i = 0; i < 25; i++)
+            {
+                if (mascara.Length > i && mascara[i] == '1')
+                {
+                    int numeroNaPosicao = numerosCartela[i];
+                    if (numeroNaPosicao != 0 && !_numerosSorteados.Contains(numeroNaPosicao))
+                    {
+                        missingNumbers.Add(numeroNaPosicao);
+                    }
+                }
+            }
+            return (missingNumbers.Count, missingNumbers);
+        }
+
         public void ReiniciarRodada()
         {
             if (_rodadaAtual == null) return;
@@ -651,6 +815,24 @@ namespace BingoAdmin.UI.Services
             _feedService.AddMessage("Sistema", $"Rodada {_rodadaAtual.NumeroOrdem} reiniciada. Histórico e sorteios limpos.", "Warning");
             OnRodadaReiniciada?.Invoke();
             _bingoContextService.NotifyRodadaReiniciada();
+        }
+
+        public void RemoverGanhador(int cartelaId)
+        {
+            if (_ganhadoresIds.Contains(cartelaId))
+            {
+                _ganhadoresIds.Remove(cartelaId);
+            }
+
+            if (_rodadaAtual != null)
+            {
+                var ganhadorDb = _context.Ganhadores.FirstOrDefault(g => g.RodadaId == _rodadaAtual.Id && g.CartelaId == cartelaId);
+                if (ganhadorDb != null)
+                {
+                    _context.Ganhadores.Remove(ganhadorDb);
+                    _context.SaveChanges();
+                }
+            }
         }
 
         public List<GanhadorInfo> GetGanhadoresAtuais()
@@ -726,5 +908,11 @@ namespace BingoAdmin.UI.Services
         public string NomeDono { get; set; } = string.Empty;
         public string NomePadrao { get; set; } = string.Empty; // Adicionado para armazenar o nome do padrão dinâmico, se aplicável
         public string MascaraPadrao { get; set; } // Adicionado para armazenar a máscara do padrão vencedor
+    }
+
+    public class PorUmaBolaStats
+    {
+        public int TotalCartelasPorUma { get; set; }
+        public Dictionary<int, int> NumerosMaisEsperados { get; set; } = new();
     }
 }

@@ -174,6 +174,33 @@ namespace BingoAdmin.UI.Views
             CombosGrid.ItemsSource = filtered.ToList();
         }
 
+        private void CombosGrid_CellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
+        {
+            if (e.EditAction == DataGridEditAction.Commit && e.Row.Item is Combo combo)
+            {
+                if (e.Column.Header?.ToString() == "Status")
+                {
+                    var comboBox = e.EditingElement as ComboBox;
+                    if (comboBox != null)
+                    {
+                        string newStatus = comboBox.SelectedItem as string;
+                        if (newStatus == "Disponivel")
+                        {
+                            combo.Pagamento = "-----";
+                        }
+                        else if (newStatus == "Reservado")
+                        {
+                            combo.Pagamento = "Pendente";
+                        }
+                        else if (newStatus == "Confirmado")
+                        {
+                            combo.Pagamento = "Pago";
+                        }
+                    }
+                }
+            }
+        }
+
         private void CombosGrid_BeginningEdit(object sender, DataGridBeginningEditEventArgs e)
         {
             if (e.Row.Item is Combo combo)

@@ -1,7 +1,7 @@
 RELATÓRIO TÉCNICO EXAUSTIVO DO PROJETO BINGO ADMIN
 ====================================================
 Data de Geração: 24/05/2024
-Versão do Documento: 4.1 (Atualizado em 02/12/2025)
+Versão do Documento: 4.3 (Atualizado em 04/12/2025)
 
 1. VISÃO GERAL DO SISTEMA
 -------------------------
@@ -308,3 +308,20 @@ O sistema está completo e robusto, cobrindo desde a geração matemática segur
         - Atualização do `BingoContextService` para salvar o ID em um arquivo `last_bingo.cfg` a cada troca de contexto.
         - Carregamento automático deste arquivo no construtor do serviço.
         - As Views (GameView, FinanceiroView, etc.) agora inicializam já com o Bingo correto selecionado.
+
+11. ROADMAP DE EVOLUÇÃO (2025)
+------------------------------
+Planejamento estratégico para equiparação com softwares líderes de mercado. Detalhes completos em `ROADMAP_MELHORIAS.txt`.
+
+11.1. Fase 1: Visual & Experiência (UX)
+    - Locução Automática (Text-to-Speech) dos números sorteados.
+    - Painel "Por Uma Bola" (Heatmap) para gerar suspense.
+    - Animação de Sorteio (efeito roleta) na Flashboard.
+
+11.2. Fase 2: Funcionalidades Técnicas
+    - Temas Visuais (Claro/Escuro/Alto Contraste).
+    - Detecção automática de segunda tela (Projetor).
+    - Validação de cartelas via QR Code.
+
+11.3. Fase 3: Refinamento Pedra Maior
+    - Duelo Visual: Exibição lado a lado das cartelas empatadas com animação de sorteio individual.

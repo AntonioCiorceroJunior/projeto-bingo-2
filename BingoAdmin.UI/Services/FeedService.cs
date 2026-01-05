@@ -67,12 +67,6 @@ namespace BingoAdmin.UI.Services
         {
             if (_currentBingoId == bingoId) return;
 
-            // Save current messages to history
-            if (_currentBingoId != -1)
-            {
-                _history[_currentBingoId] = new List<FeedMessage>(Messages);
-            }
-
             _currentBingoId = bingoId;
             
             // Clear current view
@@ -110,18 +104,65 @@ namespace BingoAdmin.UI.Services
             {
                 System.Windows.Application.Current.Dispatcher.Invoke(() =>
                 {
-                    Messages.Insert(0, new FeedMessage
+                    var msg = new FeedMessage
                     {
                         Title = title,
                         Message = message,
                         Timestamp = DateTime.Now,
                         Type = type
-                    });
+                    };
 
-                    // Keep only last 50 messages
+                    Messages.Insert(0, msg);
+
+                    // Keep only last 50 messages in View
                     if (Messages.Count > 50)
                     {
                         Messages.RemoveAt(Messages.Count - 1);
+                    }
+
+                    // Update History
+                    if (_currentBingoId != -1)
+                    {
+                        if (!_history.ContainsKey(_currentBingoId))
+                        {
+                            _history[_currentBingoId] = new List<FeedMessage>();
+                        }
+                        
+                        _history[_currentBingoId].Insert(0, msg);
+                        
+                        // Keep history slightly larger or same size
+                        if (_history[_currentBingoId].Count > 100)
+                        {
+                            _history[_currentBingoId].RemoveAt(_history[_currentBingoId].Count - 1);
+                        }
+                    }
+                });
+            }
+        }
+
+        public void AddSeparator()
+        {
+            if (System.Windows.Application.Current != null)
+            {
+                System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                {
+                    var msg = new FeedMessage
+                    {
+                        Title = "",
+                        Message = "",
+                        Type = "Separator",
+                        Timestamp = DateTime.Now
+                    };
+                    Messages.Insert(0, msg);
+                    
+                    // Update History
+                    if (_currentBingoId != -1)
+                    {
+                        if (!_history.ContainsKey(_currentBingoId))
+                        {
+                            _history[_currentBingoId] = new List<FeedMessage>();
+                        }
+                        _history[_currentBingoId].Insert(0, msg);
                     }
                 });
             }

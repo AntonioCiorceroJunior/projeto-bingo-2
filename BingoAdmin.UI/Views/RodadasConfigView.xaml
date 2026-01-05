@@ -38,7 +38,7 @@
                 <DataGridTextColumn Header="Prêmio" Binding="{Binding TipoPremio}" Width="150"/>
                 <DataGridTextColumn Header="Descrição" Binding="{Binding Descricao}" Width="*"/>
                 <DataGridTextColumn Header="Max. Ganhadores" Binding="{Binding MaximoGanhadores}" Width="100"/>
-                <DataGridComboBoxColumn Header="Tipo Jogo" SelectedValueBinding="{Binding TipoJogo}" Width="100">
+                <DataGridComboBoxColumn Header="Tipo Jogo" SelectedValueBinding="{Binding TipoJogo}" Width="100" ElementStyle="{StaticResource ComboBoxColumnElementStyle}">
                     <DataGridComboBoxColumn.ItemsSource>
                         <x:Array Type="{x:Type sys:String}">
                             <sys:String>Padrao</sys:String>
@@ -46,7 +46,7 @@
                         </x:Array>
                     </DataGridComboBoxColumn.ItemsSource>
                 </DataGridComboBoxColumn>
-                <DataGridComboBoxColumn x:Name="PadraoColumn" Header="Padrão" SelectedValueBinding="{Binding PadraoId}" DisplayMemberPath="Nome" SelectedValuePath="Id" Width="150"/>
+                <DataGridComboBoxColumn x:Name="PadraoColumn" Header="Padrão" SelectedValueBinding="{Binding PadraoId}" DisplayMemberPath="Nome" SelectedValuePath="Id" Width="150" ElementStyle="{StaticResource ComboBoxColumnElementStyle}"/>
             </DataGrid.Columns>
         </DataGrid>
 
