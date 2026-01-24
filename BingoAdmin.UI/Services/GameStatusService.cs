@@ -1,6 +1,7 @@
 using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using BingoAdmin.UI.ViewModels;
 
 namespace BingoAdmin.UI.Services
 {
@@ -10,12 +11,90 @@ namespace BingoAdmin.UI.Services
         private double _currentTimerProgress = 0;
         private string _nextRoundTimerText = "--";
         private bool _isAutoDrawActive = false;
-        private bool _isFeedVisibleOnTv = false;
+        private bool _isFeedVisibleOnTv = true;
         private bool _isGameRunning = false;
+        private bool _isPedraMaiorActive = false;
         private string _currentBingoTitle = "Nenhum Bingo Selecionado";
         private string _currentRoundTitle = "--";
+        private bool _isWinnerOverlayVisible = false;
+        private string _winnerOverlayTitle = "";
+        private string _winnerOverlayMessage = "";
+        private string _currentPrizeDescription = "";
+        private string _currentPrizeValue = "";
+        private string _currentPrizePatternName = "";
 
         public ObservableCollection<string> RecentBalls { get; } = new ObservableCollection<string>();
+        public ObservableCollection<PedraMaiorItemViewModel> PedraMaiorParticipants { get; } = new ObservableCollection<PedraMaiorItemViewModel>();
+
+        public string CurrentPrizeDescription
+        {
+            get => _currentPrizeDescription;
+            set
+            {
+                _currentPrizeDescription = value;
+                OnPropertyChanged(nameof(CurrentPrizeDescription));
+            }
+        }
+
+        public string CurrentPrizeValue
+        {
+            get => _currentPrizeValue;
+            set
+            {
+                _currentPrizeValue = value;
+                OnPropertyChanged(nameof(CurrentPrizeValue));
+            }
+        }
+
+        public string CurrentPrizePatternName
+        {
+            get => _currentPrizePatternName;
+            set
+            {
+                _currentPrizePatternName = value;
+                OnPropertyChanged(nameof(CurrentPrizePatternName));
+            }
+        }
+
+        public bool IsWinnerOverlayVisible
+        {
+            get => _isWinnerOverlayVisible;
+            set
+            {
+                _isWinnerOverlayVisible = value;
+                OnPropertyChanged(nameof(IsWinnerOverlayVisible));
+            }
+        }
+
+        public string WinnerOverlayTitle
+        {
+            get => _winnerOverlayTitle;
+            set
+            {
+                _winnerOverlayTitle = value;
+                OnPropertyChanged(nameof(WinnerOverlayTitle));
+            }
+        }
+
+        public string WinnerOverlayMessage
+        {
+            get => _winnerOverlayMessage;
+            set
+            {
+                _winnerOverlayMessage = value;
+                OnPropertyChanged(nameof(WinnerOverlayMessage));
+            }
+        }
+
+        public bool IsPedraMaiorActive
+        {
+            get => _isPedraMaiorActive;
+            set
+            {
+                _isPedraMaiorActive = value;
+                OnPropertyChanged(nameof(IsPedraMaiorActive));
+            }
+        }
 
         public bool IsGameRunning
         {

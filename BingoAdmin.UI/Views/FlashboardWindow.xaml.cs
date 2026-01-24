@@ -16,11 +16,14 @@ namespace BingoAdmin.UI.Views
         public ObservableCollection<BoardNumber> ColumnN { get; set; } = new ObservableCollection<BoardNumber>();
         public ObservableCollection<BoardNumber> ColumnG { get; set; } = new ObservableCollection<BoardNumber>();
         public ObservableCollection<BoardNumber> ColumnO { get; set; } = new ObservableCollection<BoardNumber>();
+        
+        // History of last 5 calls
+        public ObservableCollection<string> LastCalls { get; set; } = new ObservableCollection<string>();
 
         private readonly FeedService _feedService;
         private readonly GameStatusService _gameStatusService;
 
-        public ObservableCollection<FeedMessage> FeedMessages => _feedService.Messages;
+        public ICollectionView FeedMessagesView { get; private set; }
         public GameStatusService GameStatus => _gameStatusService;
         public ObservableCollection<PatternDisplayViewModel> ActivePatterns { get; set; } = new ObservableCollection<PatternDisplayViewModel>();
 
@@ -35,6 +38,17 @@ namespace BingoAdmin.UI.Views
                 _feedService = app.Host.Services.GetRequiredService<FeedService>();
                 _gameStatusService = app.Host.Services.GetRequiredService<GameStatusService>();
             }
+
+            // Setup Filtered Feed for TV (Only Winners)
+            FeedMessagesView = System.Windows.Data.CollectionViewSource.GetDefaultView(_feedService.Messages);
+            FeedMessagesView.Filter = o => 
+            {
+                if (o is FeedMessage m)
+                {
+                    return m.Type == "Success" || m.Type == "PedraMaior" || m.Type == "Separator" || m.Type == "RoundTitle";
+                }
+                return false;
+            };
 
             DataContext = this;
             InitializeBoard();
@@ -71,13 +85,26 @@ namespace BingoAdmin.UI.Views
 
             // Update Big Display
             string letter = GetLetter(number);
-            TxtCurrentNumber.Text = $"{letter}-{number}";
+            string call = $"{letter}-{number}";
+            TxtCurrentNumber.Text = call;
+
+            // Update History
+            // Avoid duplicates if called again (shouldn't happen in normal flow but good for safety)
+            if (!LastCalls.Contains(call))
+            {
+                LastCalls.Insert(0, call);
+                if (LastCalls.Count > 5)
+                {
+                    LastCalls.RemoveAt(LastCalls.Count - 1);
+                }
+            }
         }
 
         public void ResetBoard()
         {
             InitializeBoard();
             TxtCurrentNumber.Text = "--";
+            LastCalls.Clear();
         }
 
         public void SetPatterns(List<Padrao> padroes)

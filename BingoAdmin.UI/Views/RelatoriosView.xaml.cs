@@ -43,20 +43,24 @@ namespace BingoAdmin.UI.Views
 
         private void LoadBingos()
         {
-            var bingos = _comboService.GetBingos();
-            BingoSelector.ItemsSource = bingos;
-            
-            if (_bingoContext.CurrentBingoId != -1)
+            using (var scope = ((App)Application.Current).Host.Services.CreateScope())
             {
-                var target = System.Linq.Enumerable.FirstOrDefault(bingos, b => b.Id == _bingoContext.CurrentBingoId);
-                if (target != null)
+                var comboService = scope.ServiceProvider.GetRequiredService<ComboService>();
+                var bingos = comboService.GetBingos();
+                BingoSelector.ItemsSource = bingos;
+                
+                if (_bingoContext.CurrentBingoId != -1)
                 {
-                    BingoSelector.SelectedItem = target;
-                    return;
+                    var target = System.Linq.Enumerable.FirstOrDefault(bingos, b => b.Id == _bingoContext.CurrentBingoId);
+                    if (target != null)
+                    {
+                        BingoSelector.SelectedItem = target;
+                        return;
+                    }
                 }
-            }
 
-            if (BingoSelector.Items.Count > 0) BingoSelector.SelectedIndex = 0;
+                if (bingos.Count > 0) BingoSelector.SelectedIndex = 0;
+            }
         }
 
         private void BingoSelector_SelectionChanged(object sender, SelectionChangedEventArgs e)

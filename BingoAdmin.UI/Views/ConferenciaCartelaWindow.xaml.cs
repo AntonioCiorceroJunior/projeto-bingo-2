@@ -14,7 +14,7 @@ namespace BingoAdmin.UI.Views
             InitializeComponent();
 
             TxtTitulo.Text = $"CARTELA {cartela.NumeroCartela}";
-            TxtDetalhes.Text = $"{cartela.Dono} | Combo {cartela.ComboNumero}";
+            TxtDetalhes.Text = $"{cartela.Dono} | Combo {cartela.ComboNumero} | {cartela.NomeKit} | Série {cartela.CodigoValidacao}";
 
             if (!string.IsNullOrEmpty(nomePadrao))
             {

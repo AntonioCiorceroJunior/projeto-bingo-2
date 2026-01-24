@@ -1,0 +1,101 @@
+<Window x:Class="BingoAdmin.UI.Views.PaymentWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="Pagamento Necessário" Height="600" Width="800"
+        WindowStartupLocation="CenterScreen" ResizeMode="NoResize" WindowStyle="None"
+        Background="{DynamicResource MainBackgroundBrush}">
+    
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="../Styles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
+
+    <Border BorderBrush="{DynamicResource PrimaryBrush}" BorderThickness="2">
+        <Grid Margin="20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Header -->
+            <TextBlock Text="Renovação de Assinatura" FontSize="28" FontWeight="Bold" Foreground="{DynamicResource PrimaryBrush}" HorizontalAlignment="Center" Margin="0,0,0,20"/>
+
+            <!-- Content Area -->
+            <Grid Grid.Row="1">
+                <!-- Payment Options Panel -->
+                <StackPanel x:Name="PaymentPanel" Visibility="Visible">
+                    <TextBlock Text="Sua licença expirou ou ainda não foi ativada." FontSize="18" HorizontalAlignment="Center" Margin="0,0,0,30"/>
+                    
+                    <TextBlock Text="Escolha seu plano de acesso:" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                    
+                    <Button Content="Diária - R$ 50,00 (PIX)" Height="50" Margin="0,5" Style="{DynamicResource PrimaryButtonStyle}" Click="PayDaily_Click"/>
+                    <Button Content="Mensal - R$ 400,00 (PIX)" Height="50" Margin="0,5" Style="{DynamicResource PrimaryButtonStyle}" Click="PayMonthly_Click"/>
+                    
+                    <Button Content="Cartão de Crédito" Height="50" Margin="0,5" Style="{DynamicResource SecondaryButtonStyle}" Click="CreditCardButton_Click"/>
+                    
+                    <TextBlock Text="Ou experimente o sistema:" FontSize="16" FontWeight="SemiBold" Margin="0,30,0,10"/>
+                    <Button x:Name="FreeTrialButton" Content="Solicitar Teste Grátis (20 min)" Height="50" Margin="0,5" Background="#2ecc71" Foreground="White" Click="FreeTrialButton_Click"/>
+                </StackPanel>
+
+                <!-- Free Trial Form Panel -->
+                <StackPanel x:Name="FreeTrialPanel" Visibility="Collapsed">
+                    <TextBlock Text="Solicitação de Teste Grátis" FontSize="20" FontWeight="Bold" Margin="0,0,0,20"/>
+                    
+                    <TextBlock Text="Nome Completo"/>
+                    <TextBox x:Name="TrialNameBox" Margin="0,5,0,10" Padding="5"/>
+
+                    <TextBlock Text="CPF (Opcional)"/>
+                    <TextBox x:Name="TrialCpfBox" Margin="0,5,0,10" Padding="5"/>
+
+                    <TextBlock Text="Telefone (Com DDD)"/>
+                    <TextBox x:Name="TrialPhoneBox" Margin="0,5,0,10" Padding="5"/>
+
+                    <TextBlock Text="Motivo / Indicação"/>
+                    <TextBox x:Name="TrialReasonBox" Height="80" TextWrapping="Wrap" Margin="0,5,0,10" Padding="5" AcceptsReturn="True"/>
+
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
+                        <Button Content="Voltar" Width="100" Margin="0,0,10,0" Style="{DynamicResource SecondaryButtonStyle}" Click="BackToPayment_Click"/>
+                        <Button Content="Confirmar Solicitação" Width="150" Style="{DynamicResource PrimaryButtonStyle}" Click="SubmitTrial_Click"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- Pix Payment Panel -->
+                <StackPanel x:Name="PixPaymentPanel" Visibility="Collapsed" HorizontalAlignment="Center" Width="400">
+                    <TextBlock Text="Escaneie o QR Code para pagar" FontSize="20" FontWeight="Bold" Margin="0,0,0,20" HorizontalAlignment="Center"/>
+                    
+                    <Image x:Name="QrCodeImage" Width="200" Height="200" Margin="0,0,0,20"/>
+                    
+                    <TextBlock x:Name="PixPlanText" Text="Plano Selecionado" FontSize="16" HorizontalAlignment="Center" Margin="0,0,0,5"/>
+                    <TextBlock x:Name="PixAmountText" Text="Valor: R$ 0,00" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource PrimaryBrush}" HorizontalAlignment="Center" Margin="0,0,0,20"/>
+
+                    <TextBlock Text="Pix Copia e Cola:" Margin="0,0,0,5"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBox x:Name="PixCopyBox" IsReadOnly="True" Padding="5" Height="30" VerticalContentAlignment="Center"/>
+                        <Button Grid.Column="1" Content="Copiar" Margin="5,0,0,0" Padding="10,0" Click="CopyPix_Click"/>
+                    </Grid>
+
+                    <Button Content="Já paguei, enviar comprovante" Margin="0,20,0,0" Style="{DynamicResource PrimaryButtonStyle}" Click="WhatsAppButton_Click"/>
+                    <Button Content="Voltar" Margin="0,10,0,0" Style="{DynamicResource SecondaryButtonStyle}" Click="BackToPayment_Click"/>
+                </StackPanel>
+            </Grid>
+
+            <!-- Footer -->
+            <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,20,0,0">
+                <TextBlock Text="Dúvidas? Fale conosco no WhatsApp:" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                <Button Content="WhatsApp (41) 9 8773-3337" Background="#25D366" Foreground="White" Padding="10,5" Click="WhatsAppButton_Click"/>
+                <Button Content="Sair do Sistema" Margin="20,0,0,0" Style="{DynamicResource DangerButtonStyle}" Click="ExitButton_Click"/>
+            </StackPanel>
+        </Grid>
+    </Border>
+</Window>

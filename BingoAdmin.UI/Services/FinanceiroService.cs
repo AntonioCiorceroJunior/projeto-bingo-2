@@ -62,9 +62,9 @@ namespace BingoAdmin.UI.Services
             // O usuário pediu "quanto ele vai lucrar", então previsão (todos com dono) é interessante,
             // mas vamos filtrar por "Pago" para ser mais conservador ou mostrar os dois?
             // Vamos simplificar: Receita Potencial (Todos com dono) vs Receita Real (Pagos).
-            // Por enquanto, vamos usar Receita Real (Pagos).
+            // Por enquanto, vamos usar Receita Real (Status == Confirmado).
             
-            int combosPagos = _context.Combos.Count(c => c.BingoId == bingoId && !string.IsNullOrEmpty(c.NomeDono) && c.Pagamento == "Pago");
+            int combosPagos = _context.Combos.Count(c => c.BingoId == bingoId && !string.IsNullOrEmpty(c.NomeDono) && c.Status == "Confirmado");
             decimal receita = combosPagos * bingo.ValorPorCombo;
 
             // Fix for SQLite limitation: "SQLite cannot apply aggregate operator 'Sum' on expressions of type 'decimal'"

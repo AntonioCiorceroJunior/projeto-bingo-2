@@ -1,0 +1,64 @@
+ROADMAP DE MELHORIAS - BINGO ADMIN (2025)
+===========================================
+Baseado em análise comparativa com líderes de mercado (Bingo Blitz, Bingo Rose, UniMax).
+
+OBJETIVO:
+Elevar o nível de experiência do usuário (UX) e automação para equiparar o Bingo Admin aos softwares profissionais de TV e Cassinos.
+
+FILA DE TRABALHO (ORDEM DE EXECUÇÃO):
+=====================================
+
+FASE 1: VISUAL & EXPERIÊNCIA (O "SHOW")
+---------------------------------------
+1. Redesign da Flashboard (Modern UI)
+   - O que é: Transformação visual da tela do projetor.
+   - Detalhes: Fundo Preto/Azul Escuro, Número Atual ocupando 40% da tela, Histórico das últimas 5 bolas (Letra+Número), Cores Internacionais (B=Azul, I=Vermelho, N=Branco, G=Verde, O=Amarelo).
+   - Status: CONCLUÍDO [x].
+
+2. Locução Automática (Text-to-Speech)
+   - O que é: O sistema "fala" os números sorteados (ex: "B-12", "N-40") usando a voz sintética do Windows.
+   - Status: Pendente.
+
+3. Painel "Por Uma Bola" (Heatmap/Termômetro)
+   - O que é: Indicador visual na tela do operador mostrando quantas cartelas faltam apenas 1 número para bater.
+   - Status: Pendente.
+
+4. Animação de Sorteio (Roleta Visual)
+   - O que é: Efeito visual de números passando rapidamente antes de parar no sorteado na Flashboard.
+   - Status: Pendente.
+
+5. Efeitos Sonoros (SFX)
+   - O que é: Sons de tensão, aplausos e erro em momentos chave.
+   - Status: Pendente.
+
+FASE 2: OPERACIONAL & SEGURANÇA (A "MESA")
+------------------------------------------
+6. Verificação Manual por ID (Digitação)
+   - O que é: Campo para digitar o ID da cartela e validar instantaneamente.
+   - Status: Pendente.
+
+7. Log de Auditoria (Caixa Preta)
+   - O que é: Registro detalhado de ações críticas (Início de Rodada, Validação, etc.).
+   - Status: Pendente.
+
+8. Controle de Vendedores (Opcional)
+   - O que é: Vincular faixas de cartelas a vendedores.
+   - Status: Pendente.
+
+9. Segunda Tela Inteligente (Projetor Automático)
+   - O que é: Detecção automática de segundo monitor para abrir a Flashboard.
+   - Status: Pendente.
+
+10. Temas Visuais (Theming)
+    - O que é: Opção de trocar cores do sistema (Claro/Escuro).
+    - Status: Pendente.
+
+11. Validação via QR Code (Futuro)
+    - O que é: Leitura de QR para validação.
+    - Status: Pendente.
+
+FASE 3: DESEMPATE (O "GRAN FINALE")
+-----------------------------------
+12. Duelo Visual (Pedra Maior)
+    - O que é: Mostrar as cartelas empatadas lado a lado com animação de sorteio individual.
+    - Status: Pendente.

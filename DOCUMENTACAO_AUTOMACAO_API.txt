@@ -62,10 +62,21 @@ A. Endpoints Necessários (Sugestão para API Futura)
    - POST /api/financeiro/resumo -> Envia relatório financeiro ao admin.
 
 B. Comportamentos do Bot (WhatsApp)
-   1. Envio de Cartelas:
+   1. Fluxo de Vendas Automático (Chat-Commerce):
+      - Comando `!bot`: Exibe menu de ajuda.
+      - Comando `!combos` / `!cartelas`: Lista opções disponíveis com preços.
+      - Comando `!disponiveis`: Mostra quantidade restante.
+      - Processo de Compra:
+        1. Usuário solicita item (ex: "Quero o Combo 1").
+        2. Bot reserva temporariamente e gera payload Pix (Copia e Cola + QR Code).
+        3. Bot monitora status do pagamento (Webhook Gateway).
+        4. Pagamento Confirmado -> Bot gera PDF das cartelas e envia no privado.
+        5. Bot cadastra jogador no banco de dados do Bingo Admin.
+
+   2. Envio de Cartelas (Pós-Venda):
       - O usuário compra, o bot envia o PDF da cartela automaticamente.
    
-   2. Narração do Jogo (Opcional/Configurável):
+   3. Narração do Jogo (Opcional/Configurável):
       - "Começou a 1ª Rodada! Prêmio: R$ 500,00. Padrão: Linha."
       - "BINGO! O ganhador foi João da Silva (Cartela 1054)."
    

@@ -45,20 +45,23 @@
                                             <StackPanel Orientation="Horizontal" Margin="5">
                                                 <TextBlock x:Name="TxtParticipante" Text="{Binding DisplayText}" 
                                                            FontWeight="{Binding FontWeight}" 
-                                                           Foreground="{DynamicResource TextBrush}" 
                                                            FontSize="14"/>
-                                                <TextBlock Text="{Binding GanhadorLabel}" 
+                                                <TextBlock x:Name="TxtGanhador" Text="{Binding GanhadorLabel}" 
                                                            FontWeight="Bold" 
-                                                       Foreground="Green" 
-                                                       FontSize="14"/>
-                                        </StackPanel>
-                                        <DataTemplate.Triggers>
-                                            <DataTrigger Binding="{Binding IsGanhador}" Value="True">
-                                                <Setter TargetName="TxtParticipante" Property="Foreground" Value="Green"/>
-                                            </DataTrigger>
-                                        </DataTemplate.Triggers>
-                                    </DataTemplate>
-                                </ListBox.ItemTemplate>
+                                                           FontSize="14"/>
+                                            </StackPanel>
+                                            <DataTemplate.Triggers>
+                                                <DataTrigger Binding="{Binding IsGanhador}" Value="True">
+                                                    <Setter TargetName="TxtParticipante" Property="Foreground" Value="Green"/>
+                                                    <Setter TargetName="TxtGanhador" Property="Foreground" Value="Green"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type ListBoxItem}}, Path=IsSelected}" Value="True">
+                                                    <Setter TargetName="TxtParticipante" Property="Foreground" Value="White"/>
+                                                    <Setter TargetName="TxtGanhador" Property="Foreground" Value="White"/>
+                                                </DataTrigger>
+                                            </DataTemplate.Triggers>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
                             </ListBox>
                         </Expander>
                     </DataTemplate>

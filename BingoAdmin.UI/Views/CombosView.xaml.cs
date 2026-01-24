@@ -49,22 +49,30 @@ namespace BingoAdmin.UI.Views
 
         private void LoadBingos()
         {
-            var bingos = _comboService.GetBingos();
-            BingoSelector.ItemsSource = bingos;
-
-            if (_bingoContext.CurrentBingoId != -1)
+            using (var scope = ((App)Application.Current).Host.Services.CreateScope())
             {
-                var target = bingos.FirstOrDefault(b => b.Id == _bingoContext.CurrentBingoId);
-                if (target != null)
+                var comboService = scope.ServiceProvider.GetRequiredService<ComboService>();
+                var bingos = comboService.GetBingos();
+                BingoSelector.ItemsSource = bingos;
+
+                if (_bingoContext.CurrentBingoId != -1)
                 {
-                    BingoSelector.SelectedItem = target;
-                    return;
+                    var target = bingos.FirstOrDefault(b => b.Id == _bingoContext.CurrentBingoId);
+                    if (target != null)
+                    {
+                        BingoSelector.SelectedItem = target;
+                        return;
+                    }
                 }
-            }
 
-            if (bingos.Count > 0)
-            {
-                BingoSelector.SelectedIndex = 0;
+                if (bingos.Count > 0)
+                {
+                    BingoSelector.SelectedIndex = 0;
+                }
+                else
+                {
+                    BingoSelector.ItemsSource = null;
+                }
             }
         }
 
@@ -106,8 +114,8 @@ namespace BingoAdmin.UI.Views
         {
             int total = _allCombos.Count;
             int disponiveis = _allCombos.Count(c => string.IsNullOrEmpty(c.NomeDono));
-            int confirmados = _allCombos.Count(c => !string.IsNullOrEmpty(c.NomeDono) && c.Pagamento == "Pago");
-            int pendentes = _allCombos.Count(c => !string.IsNullOrEmpty(c.NomeDono) && c.Pagamento != "Pago");
+            int confirmados = _allCombos.Count(c => !string.IsNullOrEmpty(c.NomeDono) && c.Status == "Confirmado");
+            int pendentes = _allCombos.Count(c => !string.IsNullOrEmpty(c.NomeDono) && c.Status != "Confirmado");
 
             BtnFilterDisponivel.Content = $"Disponíveis: {disponiveis}";
             BtnFilterPendente.Content = $"Pendentes: {pendentes}";
@@ -151,13 +159,13 @@ namespace BingoAdmin.UI.Views
                     BtnCopy.Content = "Copiar Lista de Disponíveis (WhatsApp)";
                     break;
                 case "Pendente":
-                    filtered = _allCombos.Where(c => !string.IsNullOrEmpty(c.NomeDono) && c.Pagamento != "Pago");
+                    filtered = _allCombos.Where(c => !string.IsNullOrEmpty(c.NomeDono) && c.Status == "Reservado");
                     BtnFilterPendente.Background = orangeBrush;
                     BtnCopy.Background = orangeBrush;
                     BtnCopy.Content = "Copiar Lista de Pendentes (WhatsApp)";
                     break;
                 case "Confirmado":
-                    filtered = _allCombos.Where(c => !string.IsNullOrEmpty(c.NomeDono) && c.Pagamento == "Pago");
+                    filtered = _allCombos.Where(c => !string.IsNullOrEmpty(c.NomeDono) && c.Status == "Confirmado");
                     BtnFilterConfirmado.Background = greenBrush;
                     BtnCopy.Background = greenBrush;
                     BtnCopy.Content = "Copiar Lista de Confirmados (WhatsApp)";
@@ -172,6 +180,33 @@ namespace BingoAdmin.UI.Views
             }
 
             CombosGrid.ItemsSource = filtered.ToList();
+        }
+
+        private void CombosGrid_CellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
+        {
+            if (e.EditAction == DataGridEditAction.Commit && e.Row.Item is Combo combo)
+            {
+                if (e.Column.Header?.ToString() == "Status")
+                {
+                    var comboBox = e.EditingElement as ComboBox;
+                    if (comboBox != null)
+                    {
+                        string newStatus = comboBox.SelectedItem as string;
+                        if (newStatus == "Disponivel")
+                        {
+                            combo.Pagamento = "-----";
+                        }
+                        else if (newStatus == "Reservado")
+                        {
+                            combo.Pagamento = "Pendente";
+                        }
+                        else if (newStatus == "Confirmado")
+                        {
+                            combo.Pagamento = "Pago";
+                        }
+                    }
+                }
+            }
         }
 
         private void CombosGrid_BeginningEdit(object sender, DataGridBeginningEditEventArgs e)

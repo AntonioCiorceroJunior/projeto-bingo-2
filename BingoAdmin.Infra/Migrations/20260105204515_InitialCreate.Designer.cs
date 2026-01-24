@@ -3,6 +3,7 @@ using System;
 using BingoAdmin.Infra.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
@@ -11,43 +12,55 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BingoAdmin.Infra.Migrations
 {
     [DbContext(typeof(BingoContext))]
-    [Migration("20251125173043_UpdateSchema_v3")]
-    partial class UpdateSchema_v3
+    [Migration("20260105204515_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder.HasAnnotation("ProductVersion", "8.0.0");
+            modelBuilder
+                .HasAnnotation("ProductVersion", "8.0.0")
+                .HasAnnotation("Relational:MaxIdentifierLength", 128);
+
+            SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
             modelBuilder.Entity("BingoAdmin.Domain.Entities.Bingo", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<int>("CartelasPorCombo")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<DateTime>("DataInicioPrevista")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("ModoPadroesDinamicos")
+                        .HasColumnType("bit");
 
                     b.Property<string>("Nome")
                         .IsRequired()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("QuantidadeCombos")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<int>("QuantidadeRodadas")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<string>("Status")
                         .IsRequired()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("UsuarioCriadorId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("ValorPorCombo")
+                        .HasColumnType("decimal(18,2)");
 
                     b.HasKey("Id");
 
@@ -56,28 +69,56 @@ namespace BingoAdmin.Infra.Migrations
                     b.ToTable("Bingos");
                 });
 
+            modelBuilder.Entity("BingoAdmin.Domain.Entities.BingoPadrao", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("BingoId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("FoiSorteado")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("PadraoId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BingoId");
+
+                    b.HasIndex("PadraoId");
+
+                    b.ToTable("BingoPadroes");
+                });
+
             modelBuilder.Entity("BingoAdmin.Domain.Entities.Cartela", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<int>("BingoId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<int>("ComboId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<string>("GridNumeros")
                         .IsRequired()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("HashUnico")
                         .IsRequired()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("NumeroCartelaNoCombo")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.HasKey("Id");
 
@@ -90,32 +131,34 @@ namespace BingoAdmin.Infra.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<int>("BingoId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<DateTime?>("DataConfirmacao")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("NomeDono")
                         .IsRequired()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("NumeroCombo")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<string>("Observacoes")
                         .IsRequired()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Pagamento")
                         .IsRequired()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Status")
                         .IsRequired()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
@@ -124,20 +167,87 @@ namespace BingoAdmin.Infra.Migrations
                     b.ToTable("Combos");
                 });
 
+            modelBuilder.Entity("BingoAdmin.Domain.Entities.DesempateItem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("BingoId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("CartelaId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("CartelaNumero")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Combo")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsVencedor")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Nome")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("PedraMaior")
+                        .HasColumnType("int");
+
+                    b.Property<int>("RodadaId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("DesempateItens");
+                });
+
+            modelBuilder.Entity("BingoAdmin.Domain.Entities.Despesa", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("BingoId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Descricao")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Tipo")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("Valor")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Despesas");
+                });
+
             modelBuilder.Entity("BingoAdmin.Domain.Entities.Ganhador", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<int>("CartelaId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<bool>("IsVencedorFinal")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("bit");
 
                     b.Property<int>("RodadaId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.HasKey("Id");
 
@@ -152,18 +262,20 @@ namespace BingoAdmin.Infra.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<bool>("IsPredefinido")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("bit");
 
                     b.Property<string>("Mascara")
                         .IsRequired()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Nome")
                         .IsRequired()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
@@ -174,19 +286,21 @@ namespace BingoAdmin.Infra.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<int>("GanhadorId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<int>("NumeroSorteado")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<int>("OrdemSorteio")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<int>("RodadaId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.HasKey("Id");
 
@@ -199,31 +313,43 @@ namespace BingoAdmin.Infra.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<int>("BingoId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<string>("Descricao")
                         .IsRequired()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("EhRodadaExtra")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("bit");
+
+                    b.Property<int?>("MaximoGanhadores")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("ModoPadroesDinamicos")
+                        .HasColumnType("bit");
 
                     b.Property<int>("NumeroOrdem")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<int?>("PadraoId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<string>("Status")
                         .IsRequired()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("TipoJogo")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("TipoPremio")
                         .IsRequired()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
@@ -234,27 +360,55 @@ namespace BingoAdmin.Infra.Migrations
                     b.ToTable("Rodadas");
                 });
 
+            modelBuilder.Entity("BingoAdmin.Domain.Entities.RodadaPadrao", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("FoiSorteado")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("PadraoId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("RodadaId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PadraoId");
+
+                    b.HasIndex("RodadaId");
+
+                    b.ToTable("RodadaPadroes");
+                });
+
             modelBuilder.Entity("BingoAdmin.Domain.Entities.Sorteio", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<int>("BingoId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<string>("BolasSorteadas")
                         .IsRequired()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("DataHoraFim")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime>("DataHoraInicio")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<int>("RodadaId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.HasKey("Id");
 
@@ -267,19 +421,21 @@ namespace BingoAdmin.Infra.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("Email")
                         .IsRequired()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Nome")
                         .IsRequired()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("SenhaHash")
                         .IsRequired()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
@@ -295,6 +451,25 @@ namespace BingoAdmin.Infra.Migrations
                         .IsRequired();
 
                     b.Navigation("UsuarioCriador");
+                });
+
+            modelBuilder.Entity("BingoAdmin.Domain.Entities.BingoPadrao", b =>
+                {
+                    b.HasOne("BingoAdmin.Domain.Entities.Bingo", "Bingo")
+                        .WithMany("BingoPadroes")
+                        .HasForeignKey("BingoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("BingoAdmin.Domain.Entities.Padrao", "Padrao")
+                        .WithMany()
+                        .HasForeignKey("PadraoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Bingo");
+
+                    b.Navigation("Padrao");
                 });
 
             modelBuilder.Entity("BingoAdmin.Domain.Entities.Cartela", b =>
@@ -324,13 +499,13 @@ namespace BingoAdmin.Infra.Migrations
                     b.HasOne("BingoAdmin.Domain.Entities.Cartela", "Cartela")
                         .WithMany()
                         .HasForeignKey("CartelaId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("BingoAdmin.Domain.Entities.Rodada", "Rodada")
                         .WithMany("Ganhadores")
                         .HasForeignKey("RodadaId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.Navigation("Cartela");
@@ -366,6 +541,25 @@ namespace BingoAdmin.Infra.Migrations
                     b.Navigation("Padrao");
                 });
 
+            modelBuilder.Entity("BingoAdmin.Domain.Entities.RodadaPadrao", b =>
+                {
+                    b.HasOne("BingoAdmin.Domain.Entities.Padrao", "Padrao")
+                        .WithMany()
+                        .HasForeignKey("PadraoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("BingoAdmin.Domain.Entities.Rodada", "Rodada")
+                        .WithMany("RodadaPadroes")
+                        .HasForeignKey("RodadaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Padrao");
+
+                    b.Navigation("Rodada");
+                });
+
             modelBuilder.Entity("BingoAdmin.Domain.Entities.Sorteio", b =>
                 {
                     b.HasOne("BingoAdmin.Domain.Entities.Rodada", "Rodada")
@@ -379,6 +573,8 @@ namespace BingoAdmin.Infra.Migrations
 
             modelBuilder.Entity("BingoAdmin.Domain.Entities.Bingo", b =>
                 {
+                    b.Navigation("BingoPadroes");
+
                     b.Navigation("Combos");
 
                     b.Navigation("Rodadas");
@@ -392,6 +588,8 @@ namespace BingoAdmin.Infra.Migrations
             modelBuilder.Entity("BingoAdmin.Domain.Entities.Rodada", b =>
                 {
                     b.Navigation("Ganhadores");
+
+                    b.Navigation("RodadaPadroes");
 
                     b.Navigation("Sorteios");
                 });

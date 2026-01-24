@@ -4,10 +4,12 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:BingoAdmin.UI.Views"
+             xmlns:converters="clr-namespace:BingoAdmin.UI.Converters"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
     <UserControl.Resources>
         <local:StringNotEmptyConverter x:Key="StringNotEmptyConverter"/>
+        <converters:StatusToRowBackgroundConverter x:Key="StatusToRowBackgroundConverter"/>
     </UserControl.Resources>
 
     <Grid Margin="20">
@@ -57,21 +59,29 @@
                      Text="Boa tarde pessoal, segue a lista de combos, vamos pegar os combos antes que acabem, vamos vamos vamos!!!!!"/>
         </Expander>
 
-        <DataGrid x:Name="CombosGrid" Grid.Row="2" AutoGenerateColumns="False" CanUserAddRows="False" Margin="0,0,0,10" BeginningEdit="CombosGrid_BeginningEdit">
+        <DataGrid x:Name="CombosGrid" Grid.Row="2" AutoGenerateColumns="False" CanUserAddRows="False" Margin="0,0,0,10" 
+                  BeginningEdit="CombosGrid_BeginningEdit"
+                  CellEditEnding="CombosGrid_CellEditEnding"
+                  GridLinesVisibility="All"
+                  HorizontalGridLinesBrush="LightGray"
+                  VerticalGridLinesBrush="LightGray"
+                  AlternationCount="2">
             <DataGrid.RowStyle>
-                <Style TargetType="DataGridRow">
-                    <Style.Triggers>
-                        <!-- Linha fica cinza se tiver Dono (indicando que está salvo/preenchido) -->
-                        <DataTrigger Binding="{Binding NomeDono, Converter={StaticResource StringNotEmptyConverter}}" Value="True">
-                            <Setter Property="Background" Value="{DynamicResource HeaderBackgroundBrush}"/>
-                        </DataTrigger>
-                    </Style.Triggers>
+                <Style TargetType="DataGridRow" BasedOn="{StaticResource {x:Type DataGridRow}}">
+                    <Setter Property="Background">
+                        <Setter.Value>
+                            <MultiBinding Converter="{StaticResource StatusToRowBackgroundConverter}">
+                                <Binding Path="Status"/>
+                                <Binding RelativeSource="{RelativeSource Self}" Path="(ItemsControl.AlternationIndex)"/>
+                            </MultiBinding>
+                        </Setter.Value>
+                    </Setter>
                 </Style>
             </DataGrid.RowStyle>
             <DataGrid.Columns>
                 <DataGridTextColumn Header="Combo #" Binding="{Binding NumeroCombo}" IsReadOnly="True" Width="80"/>
                 <DataGridTextColumn Header="Dono" Binding="{Binding NomeDono}" Width="*"/>
-                <DataGridComboBoxColumn Header="Status" SelectedItemBinding="{Binding Status}" Width="120">
+                <DataGridComboBoxColumn Header="Status" SelectedItemBinding="{Binding Status, UpdateSourceTrigger=PropertyChanged}" Width="150" ElementStyle="{StaticResource ComboBoxColumnElementStyle}">
                     <DataGridComboBoxColumn.ItemsSource>
                         <x:Array Type="{x:Type sys:String}" xmlns:sys="clr-namespace:System;assembly=mscorlib">
                             <sys:String>Disponivel</sys:String>
@@ -80,15 +90,8 @@
                         </x:Array>
                     </DataGridComboBoxColumn.ItemsSource>
                 </DataGridComboBoxColumn>
-                <DataGridComboBoxColumn Header="Pagamento" SelectedItemBinding="{Binding Pagamento}" Width="120">
-                    <DataGridComboBoxColumn.ItemsSource>
-                        <x:Array Type="{x:Type sys:String}" xmlns:sys="clr-namespace:System;assembly=mscorlib">
-                            <sys:String>-----</sys:String>
-                            <sys:String>Pendente</sys:String>
-                            <sys:String>Pago</sys:String>
-                        </x:Array>
-                    </DataGridComboBoxColumn.ItemsSource>
-                </DataGridComboBoxColumn>
+                <!-- Pagamento removido pois é automático baseado no status -->
+                <!-- <DataGridComboBoxColumn Header="Pagamento" ... /> -->
                 <DataGridTemplateColumn Header="Ações" Width="200">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>

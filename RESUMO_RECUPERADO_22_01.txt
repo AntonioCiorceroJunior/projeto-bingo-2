@@ -1,0 +1,55 @@
+RESUMO RECUPERADO DO PROJETO (PERÍODO 06/01/2026 - 21/01/2026)
+============================================================
+Este arquivo foi gerado automaticamente para consolidar as alterações feitas no projeto
+durante o período em que o histórico de chat foi perdido.
+
+1. NOVOS MÓDULOS IMPLEMENTADOS
+------------------------------
+
+A. MÓDULO FINANCEIRO
+   - Arquivos: BingoAdmin.UI/Services/FinanceiroService.cs, FinanceiroView.xaml
+   - Funcionalidade: 
+     - Definição do valor por Combo.
+     - Cadastro e gestão de Despesas (Entidade `Despesa`).
+     - Cálculo de fluxo de caixa (Receita de Combos - Despesas).
+
+B. SERVIÇO DE E-MAIL
+   - Arquivos: BingoAdmin.UI/Services/EmailService.cs
+   - Funcionalidade:
+     - Estrutura para envio de e-mails via Gmail (SMTP).
+     - Implementação específica para "Solicitação de Teste Grátis" (Nome, CPF, Telefone).
+     - Status: Atualmente em modo MOCK (simulação), pronto para ativar com credenciais reais.
+
+C. GESTÃO AVANÇADA DE PRÊMIOS E KITS
+   - Arquivos: BingoAdmin.Domain/Entities/Premio.cs, Kit.cs
+   - Funcionalidade:
+     - Entidade `Premio` agora suporta ordens (1º, 2º prêmio), valores monetários e vínculo com Padrões específicos.
+     - Entidade `Kit` organiza cartelas dentro de combos (sub-agrupamento).
+     - Integração com a configuração de rodadas (`RodadaConfigViewModel`).
+
+D. FRASES DE EFEITO (TTS DINÂMICO)
+   - Arquivos: BingoAdmin.Domain/Entities/BingoFrase.cs
+   - Funcionalidade:
+     - Tabela no banco para armazenar frases aleatórias.
+     - Marcador de "Tipo" (ex: "PorUmaBola"), indicando preparação para o recurso de Heatmap/Tensão.
+
+2. MUDANÇAS ESTRUTURAIS
+-----------------------
+- Migrations novas criadas (mas algumas não trackeadas no git original):
+  - AddBingoFrases
+  - AddKitsTable
+  - AddPremiosAndGameModes
+- Serviços Atualizados:
+  - GameService (Lógica principal extendida).
+  - SpeechService (Provável integração com as novas Frases).
+  - UsuarioService (Ajustes de login/sessão).
+
+3. ESTADO ATUAL
+---------------
+O sistema está muito mais robusto, evoluindo de um simples "sorteador" para um "gestor de bingo", com controle financeiro e flexibilidade de premiação.
+
+4. PRÓXIMOS PASSOS SUGERIDOS
+----------------------------
+- Testar a integração do novo `Premio` com o motor de jogo (garantir que ganhar o 2º prêmio não encerre a rodada se houver 3º prêmio).
+- Ativar o `EmailService` se for desejado usar em produção.
+- Conectar as `BingoFrases` ao `SpeechService` para o locutor falar coisas variadas.

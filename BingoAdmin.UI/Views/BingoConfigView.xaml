@@ -23,17 +23,32 @@
             <StackPanel>
                 <TextBlock Text="Configuração do Bingo" FontSize="18" FontWeight="Bold" Margin="0,0,0,20"/>
                 
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
+                    <TextBlock Text="Modo de Jogo:" VerticalAlignment="Center" Margin="0,0,10,0" FontWeight="SemiBold"/>
+                    <ToggleButton x:Name="TglModoJogo" 
+                                  Content="Bingo por Rodadas (Clássico)" 
+                                  Padding="10,5"
+                                  Click="TglModoJogo_Click"/>
+                </StackPanel>
+
                 <TextBlock Text="Nome do Bingo"/>
                 <TextBox x:Name="NomeBingoBox" Margin="0,5,0,10"/>
                 
                 <TextBlock Text="Data Prevista"/>
                 <DatePicker x:Name="DataBingoPicker" Margin="0,5,0,10"/>
                 
-                <TextBlock Text="Quantidade de Combos"/>
+                <CheckBox x:Name="ChkUsarCombos" Content="Utilizar Combos" IsChecked="True" Margin="0,0,0,10" Checked="ChkUsarCombos_CheckedChanged" Unchecked="ChkUsarCombos_CheckedChanged"/>
+
+                <TextBlock x:Name="LblQtdCombos" Text="Quantidade de Combos"/>
                 <TextBox x:Name="QtdCombosBox" Margin="0,5,0,10"/>
-                
-                <TextBlock Text="Cartelas por Combo"/>
-                <TextBox x:Name="CartelasPorComboBox" Margin="0,5,0,10"/>
+
+                <StackPanel x:Name="PnlKitsPorCombo" Margin="0,0,0,10">
+                    <TextBlock Text="Kits por Combo"/>
+                    <TextBox x:Name="KitsPorComboBox"  Margin="0,5,0,0"/>
+                </StackPanel>
+
+                <TextBlock Text="Cartelas por Kit"/>
+                <TextBox x:Name="CartelasPorKitBox" Margin="0,5,0,10"/>
 
                 <TextBlock Text="Quantidade de Rodadas"/>
                 <StackPanel Orientation="Horizontal" Margin="0,5,0,10">
@@ -49,7 +64,7 @@
                             <DataGridTextColumn Header="#" Binding="{Binding Numero}" IsReadOnly="True" Width="30"/>
                             <DataGridTextColumn Header="Prêmio" Binding="{Binding TipoPremio}" Width="100"/>
                             <DataGridTextColumn Header="Descrição" Binding="{Binding Descricao}" Width="*"/>
-                            <DataGridComboBoxColumn Header="Max. Ganhadores" SelectedValueBinding="{Binding MaximoGanhadores}" Width="100">
+                            <DataGridComboBoxColumn Header="Max. Ganhadores" SelectedValueBinding="{Binding MaximoGanhadores}" Width="100" ElementStyle="{StaticResource ComboBoxColumnElementStyle}">
                                 <DataGridComboBoxColumn.ItemsSource>
                                     <x:Array Type="{x:Type sys:Int32}">
                                         <sys:Int32>1</sys:Int32>
@@ -65,7 +80,7 @@
                                     </x:Array>
                                 </DataGridComboBoxColumn.ItemsSource>
                             </DataGridComboBoxColumn>
-                            <DataGridComboBoxColumn Header="Tipo Jogo" SelectedValueBinding="{Binding TipoJogo}" Width="100">
+                            <DataGridComboBoxColumn Header="Tipo Jogo" SelectedValueBinding="{Binding TipoJogo}" Width="100" ElementStyle="{StaticResource ComboBoxColumnElementStyle}">
                                 <DataGridComboBoxColumn.ItemsSource>
                                     <x:Array Type="{x:Type sys:String}">
                                         <sys:String>Padrao</sys:String>
@@ -84,6 +99,13 @@
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
                                         <Button Content="Configurar" Click="ConfigurarPadroesRodada_Click"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTemplateColumn Header="Prêmios" Width="80">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Button Content="Prêmios" Click="ConfigurarPremiosRodada_Click"/>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>

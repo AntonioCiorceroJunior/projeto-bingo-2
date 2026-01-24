@@ -23,7 +23,8 @@ namespace BingoAdmin.UI.Services
         {
             return _context.Ganhadores
                 .Include(g => g.Cartela)
-                .ThenInclude(c => c.Combo)
+                .ThenInclude(c => c.Kit)
+                .ThenInclude(k => k.Combo)
                 .Where(g => g.RodadaId == rodadaId)
                 .ToList();
         }
@@ -33,7 +34,8 @@ namespace BingoAdmin.UI.Services
             return _context.PedraMaiorSorteios
                 .Include(p => p.Ganhador)
                 .ThenInclude(g => g.Cartela)
-                .ThenInclude(c => c.Combo)
+                .ThenInclude(c => c.Kit)
+                .ThenInclude(k => k.Combo)
                 .Where(p => p.RodadaId == rodadaId)
                 .OrderBy(p => p.OrdemSorteio)
                 .ToList();
@@ -86,7 +88,8 @@ namespace BingoAdmin.UI.Services
                 .Include(r => r.Padrao)
                 .Include(r => r.Ganhadores)
                     .ThenInclude(g => g.Cartela)
-                        .ThenInclude(c => c.Combo)
+                        .ThenInclude(c => c.Kit)
+                        .ThenInclude(k => k.Combo)
                 .Where(r => r.BingoId == bingoId)
                 .ToList();
 
@@ -99,7 +102,8 @@ namespace BingoAdmin.UI.Services
                     var historico = _context.PedraMaiorSorteios
                         .Include(p => p.Ganhador)
                         .ThenInclude(g => g.Cartela)
-                        .ThenInclude(c => c.Combo)
+                        .ThenInclude(c => c.Kit)
+                        .ThenInclude(k => k.Combo)
                         .Where(p => p.RodadaId == rodada.Id)
                         .OrderBy(p => p.OrdemSorteio)
                         .ToList();
@@ -263,7 +267,8 @@ namespace BingoAdmin.UI.Services
         {
             var ganhadores = _context.Ganhadores
                 .Include(g => g.Cartela)
-                    .ThenInclude(c => c!.Combo)
+                    .ThenInclude(c => c!.Kit)
+                        .ThenInclude(k => k!.Combo)
                 .Where(g => g.RodadaId == rodada.Id)
                 .ToList();
 
@@ -277,9 +282,11 @@ namespace BingoAdmin.UI.Services
 
             // Recalcula indices das cartelas para este bingo
             var cartelasBingo = _context.Cartelas
+                .Include(c => c.Kit)
                 .Where(c => c.BingoId == rodada.BingoId)
-                .OrderBy(c => c.ComboId).ThenBy(c => c.Id)
-                .Select(c => new { c.Id, c.ComboId })
+                .ToList()
+                .OrderBy(c => c.Kit?.ComboId ?? 0).ThenBy(c => c.Id)
+                .Select(c => new { c.Id, ComboId = c.Kit?.ComboId ?? 0 })
                 .ToList();
                 
             var cartelaMap = new Dictionary<int, int>();
@@ -298,25 +305,22 @@ namespace BingoAdmin.UI.Services
                 var sorteio = sorteios.FirstOrDefault(s => s.GanhadorId == g.Id);
                 var numeroCartela = cartelaMap.ContainsKey(g.CartelaId) ? cartelaMap[g.CartelaId] : 0;
 
-                var item = new DesempateItem
+                novosItens.Add(new DesempateItem
                 {
                     BingoId = rodada.BingoId,
                     RodadaId = rodada.Id,
                     CartelaId = g.CartelaId,
-                    Nome = g.Cartela?.Combo?.NomeDono ?? "Desconhecido",
-                    Combo = g.Cartela?.Combo?.NumeroCombo ?? 0,
+                    Nome = g.Cartela?.Kit?.Combo?.NomeDono ?? "Desconhecido",
+                    Combo = g.Cartela?.Kit?.Combo?.NumeroCombo ?? 0,
                     CartelaNumero = numeroCartela,
                     PedraMaior = sorteio?.NumeroSorteado ?? 0,
                     IsVencedor = g.IsVencedorFinal
-                };
-                novosItens.Add(item);
-                _context.DesempateItens.Add(item);
+                });
             }
-
-            if (novosItens.Any())
-            {
-                _context.SaveChanges();
-            }
+            
+            // Save migrated items
+            _context.DesempateItens.AddRange(novosItens);
+            _context.SaveChanges();
 
             return novosItens.OrderByDescending(i => i.PedraMaior).ToList();
         }

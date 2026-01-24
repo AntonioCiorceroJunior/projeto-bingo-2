@@ -1,168 +1,235 @@
 ﻿using System.Windows;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Configuration;
 using BingoAdmin.Infra.Data;
 using BingoAdmin.Domain.Services;
 using BingoAdmin.UI.Services; // Added this
 using Microsoft.EntityFrameworkCore;
+using System.IO;
 
 namespace BingoAdmin.UI
 {
     public partial class App : Application
     {
         public IHost Host { get; private set; }
+        public IConfiguration Configuration { get; private set; }
 
         public App()
         {
-            QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
+            Log("App constructor started.");
+            try 
+            {
+                // Global exception handling
+                this.DispatcherUnhandledException += App_DispatcherUnhandledException;
+                AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
 
-            Host = Microsoft.Extensions.Hosting.Host.CreateDefaultBuilder()
-                .ConfigureServices((context, services) =>
+                Log("Global handlers registered.");
+
+                QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
+
+                var basePath = AppDomain.CurrentDomain.BaseDirectory;
+                Log($"Base Path: {basePath}");
+
+                var builder = new ConfigurationBuilder()
+                    .SetBasePath(basePath)
+                    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
+                
+                Configuration = builder.Build();
+                Log("Configuration built successfully.");
+
+                Log("Building Host...");
+                Host = Microsoft.Extensions.Hosting.Host.CreateDefaultBuilder()
+                    .ConfigureServices((context, services) =>
+                    {
+                        Log("Configuring Services...");
+                        // Register DbContext
+                        services.AddDbContext<BingoContext>(options => 
+                        {
+                            try
+                            {
+                                var provider = Configuration["DatabaseProvider"] ?? "Sqlite";
+                                var connectionString = Configuration.GetConnectionString(provider == "SqlServer" ? "AzureConnection" : "DefaultConnection");
+                                Log($"Configuring DB Provider: {provider}");
+
+                                // FORCE SQLITE FOR DEBUGGING IF SQLSERVER FAILS
+                                // provider = "Sqlite"; 
+                                // connectionString = Configuration.GetConnectionString("DefaultConnection") ?? "Data Source=bingoadmin.db";
+                                // Log("FORCING SQLITE FOR DEBUGGING");
+
+                                if (provider == "SqlServer")
+                                {
+                                    Log("Calling UseSqlServer...");
+                                    options.UseSqlServer(connectionString);
+                                    Log("UseSqlServer returned.");
+                                }
+                                else
+                                {
+                                    options.UseSqlite(connectionString ?? "Data Source=bingoadmin.db");
+                                }
+                                Log("DbContext configuration lambda finished.");
+                            }
+                            catch (Exception ex)
+                            {
+                                Log($"Error inside AddDbContext: {ex.Message}");
+                                throw;
+                            }
+                        }, ServiceLifetime.Transient);
+
+                        // Services
+                        services.AddTransient<BingoService>();
+                        services.AddTransient<UsuarioService>();
+                        services.AddTransient<BingoManagementService>();
+                        services.AddTransient<ComboService>();
+                        services.AddTransient<PdfService>();
+                        services.AddTransient<PadraoService>();
+                        services.AddTransient<RodadaService>();
+                        services.AddTransient<GameService>();
+                        services.AddTransient<DesempateService>();
+                        services.AddTransient<RelatorioService>();
+                        services.AddTransient<FinanceiroService>();
+                        services.AddTransient<EmailService>();
+                        services.AddTransient<PaymentService>();
+                        services.AddTransient<FraseService>();
+                        
+                        // Global Services
+                        services.AddSingleton<FeedService>();
+                        services.AddSingleton<BingoContextService>();
+                        services.AddSingleton<GameStatusService>();
+                        services.AddSingleton<UserSession>();
+                        services.AddSingleton<ISpeechService, SpeechService>();
+                        // services.AddSingleton<ISpeechService, SilentSpeechService>(); // Debugging
+
+                        // Views
+                        services.AddSingleton<MainWindow>();
+                        services.AddTransient<Views.LoginView>();
+                        services.AddTransient<Views.DashboardView>();
+                        services.AddTransient<Views.UsuariosView>();
+                        services.AddTransient<Views.FinanceiroView>();
+                        services.AddTransient<Views.ResultadosView>();
+                        services.AddTransient<Views.MiniGamesView>();
+                        Log("Services configured.");
+                    })
+                    .Build();
+                Log("Host built successfully.");
+            }
+            catch (Exception ex)
+            {
+                Log($"CRITICAL ERROR IN CONSTRUCTOR: {ex}");
+                MessageBox.Show($"Erro Fatal no Construtor: {ex.Message}");
+                throw;
+            }
+        }
+
+        private static void Log(string message)
+        {
+            try
+            {
+                File.AppendAllText("startup_log.txt", $"{DateTime.Now:HH:mm:ss} - {message}{Environment.NewLine}");
+            }
+            catch { }
+        }
+
+        private void App_DispatcherUnhandledException(object sender, System.Windows.Threading.DispatcherUnhandledExceptionEventArgs e)
+        {
+            Log($"DispatcherUnhandledException: {e.Exception}");
+            var ex = e.Exception;
+            string msg = $"{ex.Message}";
+            while (ex.InnerException != null)
+            {
+                ex = ex.InnerException;
+                msg += $"\n ---> {ex.Message}";
+            }
+            MessageBox.Show($"Erro não tratado (Dispatcher):\n\n{msg}\n\nStack:\n{e.Exception.StackTrace}", "Erro Crítico", MessageBoxButton.OK, MessageBoxImage.Error);
+            e.Handled = true;
+        }
+
+        private void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
+        {
+            if (e.ExceptionObject is Exception ex)
+            {
+                Log($"CurrentDomain_UnhandledException: {ex}");
+                string msg = $"{ex.Message}";
+                var inner = ex;
+                while (inner.InnerException != null)
                 {
-                    // Register DbContext as Transient to avoid Scope validation errors with Singletons
-                    // and to ensure thread safety if services are used in parallel.
-                    services.AddDbContext<BingoContext>(options => {}, ServiceLifetime.Transient);
-
-                    // Services
-                    services.AddTransient<BingoService>();
-                    services.AddTransient<UsuarioService>();
-                    services.AddTransient<BingoManagementService>();
-                    services.AddTransient<ComboService>();
-                    services.AddTransient<PdfService>();
-                    services.AddTransient<PadraoService>();
-                    services.AddTransient<RodadaService>();
-                    services.AddTransient<GameService>();
-                    services.AddTransient<DesempateService>();
-                    services.AddTransient<RelatorioService>();
-                    services.AddTransient<FinanceiroService>();
-                    
-                    // Global Services
-                    services.AddSingleton<FeedService>();
-                    services.AddSingleton<BingoContextService>();
-                    services.AddSingleton<GameStatusService>();
-
-                    // Views
-                    services.AddSingleton<MainWindow>();
-                    services.AddTransient<Views.LoginView>();
-                    services.AddTransient<Views.DashboardView>();
-                    services.AddTransient<Views.FinanceiroView>();
-                    services.AddTransient<Views.ResultadosView>();
-                    services.AddTransient<Views.MiniGamesView>();
-                })
-                .Build();
+                    inner = inner.InnerException;
+                    msg += $"\n ---> {inner.Message}";
+                }
+                MessageBox.Show($"Erro não tratado (Domain):\n\n{msg}\n\nStack:\n{ex.StackTrace}", "Erro Crítico", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         private async void Application_Startup(object sender, StartupEventArgs e)
         {
             try
             {
+                Log("Application_Startup executing...");
                 await Host.StartAsync();
+                Log("Host started.");
 
                 // Seed Admin User
                 using (var scope = Host.Services.CreateScope())
                 {
+                    Log("Scope created. Resolving BingoContext...");
                     var context = scope.ServiceProvider.GetRequiredService<BingoContext>();
-                    context.Database.Migrate(); // Aplica as migrações pendentes automaticamente
-
-                    // Ensure ValorPorCombo column exists in Bingos table (manual schema update)
-                    try 
-                    {
-                        context.Database.ExecuteSqlRaw(@"ALTER TABLE ""Bingos"" ADD COLUMN ""ValorPorCombo"" TEXT NOT NULL DEFAULT '0';");
-                    }
-                    catch { /* Ignore if column already exists */ }
-
-                    try
-                    {
-                        context.Database.ExecuteSqlRaw(@"ALTER TABLE ""Bingos"" ADD COLUMN ""QuantidadeRodadas"" INTEGER NOT NULL DEFAULT 0;");
-                    }
-                    catch { /* Ignore if column already exists */ }
-
-                    try
-                    {
-                        context.Database.ExecuteSqlRaw(@"ALTER TABLE ""Rodadas"" ADD COLUMN ""ModoPadroesDinamicos"" INTEGER NOT NULL DEFAULT 0;");
-                    }
-                    catch { /* Ignore if column already exists */ }
-
-                    try
-                    {
-                        context.Database.ExecuteSqlRaw(@"ALTER TABLE ""Rodadas"" ADD COLUMN ""MaximoGanhadores"" INTEGER NULL;");
-                    }
-                    catch { /* Ignore if column already exists */ }
-
-                    try
-                    {
-                        context.Database.ExecuteSqlRaw(@"ALTER TABLE ""Rodadas"" ADD COLUMN ""TipoJogo"" TEXT NOT NULL DEFAULT '';");
-                    }
-                    catch { /* Ignore if column already exists */ }
-
-                    context.Database.ExecuteSqlRaw(@"
-                        CREATE TABLE IF NOT EXISTS ""RodadaPadroes"" (
-                            ""Id"" INTEGER NOT NULL CONSTRAINT ""PK_RodadaPadroes"" PRIMARY KEY AUTOINCREMENT,
-                            ""RodadaId"" INTEGER NOT NULL,
-                            ""PadraoId"" INTEGER NOT NULL,
-                            ""FoiSorteado"" INTEGER NOT NULL,
-                            CONSTRAINT ""FK_RodadaPadroes_Rodadas_RodadaId"" FOREIGN KEY (""RodadaId"") REFERENCES ""Rodadas"" (""Id"") ON DELETE CASCADE,
-                            CONSTRAINT ""FK_RodadaPadroes_Padroes_PadraoId"" FOREIGN KEY (""PadraoId"") REFERENCES ""Padroes"" (""Id"") ON DELETE CASCADE
-                        );
-                    ");
-
-                    // Create DesempateItens table manually if not exists (since we can't run migrations easily)
-                    // Drop table removed to persist data
-                    // context.Database.ExecuteSqlRaw(@"DROP TABLE IF EXISTS ""DesempateItens"";");
                     
-                    context.Database.ExecuteSqlRaw(@"
-                        CREATE TABLE IF NOT EXISTS ""DesempateItens"" (
-                            ""Id"" INTEGER NOT NULL CONSTRAINT ""PK_DesempateItens"" PRIMARY KEY AUTOINCREMENT,
-                            ""BingoId"" INTEGER NOT NULL DEFAULT 0,
-                            ""RodadaId"" INTEGER NOT NULL,
-                            ""CartelaId"" INTEGER NOT NULL,
-                            ""Nome"" TEXT NOT NULL,
-                            ""Combo"" INTEGER NOT NULL,
-                            ""CartelaNumero"" INTEGER NOT NULL,
-                            ""PedraMaior"" INTEGER NOT NULL,
-                            ""IsVencedor"" INTEGER NOT NULL
-                        );
-                    ");
-
-                    context.Database.ExecuteSqlRaw(@"
-                        CREATE TABLE IF NOT EXISTS ""Despesas"" (
-                            ""Id"" INTEGER NOT NULL CONSTRAINT ""PK_Despesas"" PRIMARY KEY AUTOINCREMENT,
-                            ""BingoId"" INTEGER NOT NULL,
-                            ""Descricao"" TEXT NOT NULL,
-                            ""Valor"" TEXT NOT NULL,
-                            ""Tipo"" TEXT NOT NULL
-                        );
-                    ");
-
-                    // Garante que o usuário admin existe e a senha está correta
-                    var adminUser = System.Linq.Enumerable.FirstOrDefault(context.Usuarios, u => u.Email == "admin");
-                    if (adminUser == null)
+                    Log("Applying Migrations...");
+                    if (context.Database.IsSqlServer())
                     {
-                        adminUser = new BingoAdmin.Domain.Entities.Usuario
-                        {
-                            Nome = "Administrador",
-                            Email = "admin",
-                            SenhaHash = BCrypt.Net.BCrypt.HashPassword("admin")
-                        };
-                        context.Usuarios.Add(adminUser);
+                        context.Database.Migrate(); 
+                        Log("Migrations applied.");
                     }
                     else
                     {
-                        // Reseta a senha para garantir o acesso caso tenha sido alterada ou corrompida
-                        adminUser.SenhaHash = BCrypt.Net.BCrypt.HashPassword("admin");
+                        // Ensure DB exists first
+                        bool created = context.Database.EnsureCreated();
+                        Log($"Database ensured (SQLite). Created? {created}");
+                        
+                        // HOTFIX: Ensure 'PadraoId' column exists in 'Premios' table
+                        // This handles the case where migration didn't run properly on existing DB
+                        try
+                        {
+                            context.Database.ExecuteSqlRaw("ALTER TABLE Premios ADD COLUMN PadraoId INTEGER NULL;");
+                            Log("HOTFIX: Added PadraoId column to Premios.");
+                        }
+                        catch 
+                        { 
+                            // Ignore if column already exists
+                            Log("HOTFIX: PadraoId column likely already exists.");
+                        }
+
+                        // Hotfix 2: Index
+                        try
+                        {
+                            context.Database.ExecuteSqlRaw("CREATE INDEX IX_Premios_PadraoId ON Premios (PadraoId);");
+                        }
+                        catch { /* Ignore */ }
                     }
+
+                    // Ensure Admin User Exists
+                    Log("Resolving UsuarioService...");
+                    var usuarioService = scope.ServiceProvider.GetRequiredService<UsuarioService>();
+                    
+                    Log("Ensuring Admin User...");
+                    usuarioService.EnsureAdminUser();
+
                     context.SaveChanges();
 
-                    // Seed Padrões
+                    Log("Resolving PadraoService...");
                     var padraoService = scope.ServiceProvider.GetRequiredService<PadraoService>();
                     padraoService.SeedPadroesIniciais();
+                    Log("Seed data completed.");
                 }
 
+                Log("Resolving MainWindow...");
                 var mainWindow = Host.Services.GetRequiredService<MainWindow>();
+                Log("Showing MainWindow...");
                 mainWindow.Show();
             }
             catch (System.Exception ex)
             {
+                Log($"STARTUP FATAL ERROR: {ex}");
                 MessageBox.Show($"Erro fatal ao iniciar a aplicação: {ex.Message}\n\nDetalhes: {ex.InnerException?.Message}", "Erro de Inicialização", MessageBoxButton.OK, MessageBoxImage.Error);
                 Shutdown();
             }

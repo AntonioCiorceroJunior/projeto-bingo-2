@@ -28,7 +28,8 @@ namespace BingoAdmin.UI.Services
                 .Include(r => r.Padrao)
                 .Include(r => r.Ganhadores)
                     .ThenInclude(g => g.Cartela)
-                    .ThenInclude(c => c.Combo)
+                    .ThenInclude(c => c.Kit)
+                    .ThenInclude(k => k.Combo)
                 .Where(r => r.BingoId == bingoId)
                 .OrderBy(r => r.NumeroOrdem)
                 .ToList();
@@ -76,10 +77,10 @@ namespace BingoAdmin.UI.Services
                                     foreach (var ganhador in rodada.Ganhadores)
                                     {
                                         string status = ganhador.IsVencedorFinal ? " (VENCEDOR FINAL)" : "";
-                                        string nome = ganhador.Cartela?.Combo?.NomeDono ?? "Desconhecido";
-                                        int comboId = ganhador.Cartela?.ComboId ?? 0;
+                                        string nome = ganhador.Cartela?.Kit?.Combo?.NomeDono ?? "Desconhecido";
+                                        int comboNum = ganhador.Cartela?.Kit?.Combo?.NumeroCombo ?? 0;
                                         
-                                        column.Item().PaddingLeft(10).Text($"• {nome} - Combo {comboId} {status}");
+                                        column.Item().PaddingLeft(10).Text($"• {nome} - Combo {comboNum} {status}");
                                     }
                                 }
                                 else
@@ -121,7 +122,8 @@ namespace BingoAdmin.UI.Services
                 foreach (var g in ganhadores)
                 {
                     var cartela = _context.Cartelas
-                        .Include(c => c.Combo)
+                        .Include(c => c.Kit)
+                        .ThenInclude(k => k.Combo)
                         .FirstOrDefault(c => c.Id == g.CartelaId);
 
                     if (cartela != null)
@@ -130,9 +132,9 @@ namespace BingoAdmin.UI.Services
                         {
                             RodadaDescricao = $"{rodada.NumeroOrdem}ª Rodada - {rodada.Descricao}",
                             TipoPremio = rodada.TipoPremio,
-                            NomeGanhador = cartela.Combo?.NomeDono ?? "Desconhecido",
-                            ComboNumero = cartela.Combo?.NumeroCombo ?? 0,
-                            CartelaNumero = cartela.NumeroCartelaNoCombo
+                            NomeGanhador = cartela.Kit?.Combo?.NomeDono ?? "Desconhecido",
+                            ComboNumero = cartela.Kit?.Combo?.NumeroCombo ?? 0,
+                            CartelaNumero = cartela.NumeroCartelaNoKit
                         });
                     }
                 }

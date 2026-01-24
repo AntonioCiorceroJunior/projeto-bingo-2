@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace BingoAdmin.Domain.Entities
 {
@@ -14,6 +15,7 @@ namespace BingoAdmin.Domain.Entities
         public string Pagamento { get; set; } = "-----"; // -----, Pendente, Pago
         public DateTime? DataConfirmacao { get; set; }
         public string Observacoes { get; set; } = string.Empty;
-        public List<Cartela> Cartelas { get; set; } = new();
+        
+        public List<Kit> Kits { get; set; } = new();
     }
 }
