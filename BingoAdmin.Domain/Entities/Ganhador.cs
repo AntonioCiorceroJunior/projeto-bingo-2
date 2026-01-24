@@ -8,5 +8,7 @@ namespace BingoAdmin.Domain.Entities
         public int CartelaId { get; set; }
         public Cartela? Cartela { get; set; }
         public bool IsVencedorFinal { get; set; } // In case of tie-break
+        public int? PremioId { get; set; } // Qual prêmio específico levou
+        public Premio? Premio { get; set; }
     }
 }

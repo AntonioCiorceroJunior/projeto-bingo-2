@@ -9,15 +9,54 @@ namespace BingoAdmin.Domain.Services
     {
         private readonly Random _random = new Random();
 
-        public List<Combo> GerarCombos(int bingoId, int quantidadeCombos, int cartelasPorCombo)
+        public List<Combo> GerarCombos(int bingoId, int quantidadeCombos, int kitsPorCombo, int cartelasPorKit)
         {
             // Mantendo compatibilidade para chamadas simples, criando um HashSet novo
-            return GerarLoteCombos(bingoId, 1, quantidadeCombos, cartelasPorCombo, new HashSet<string>());
+            return GerarLoteCombos(bingoId, 1, quantidadeCombos, kitsPorCombo, cartelasPorKit, new HashSet<string>());
         }
 
-        public List<Combo> GerarLoteCombos(int bingoId, int startCombo, int quantidade, int cartelasPorCombo, HashSet<string> hashesExistentes)
+        public List<Combo> GerarLoteCombos(int bingoId, int startCombo, int quantidade, int kitsPorCombo, int cartelasPorKit, HashSet<string> hashesExistentes)
         {
             var combos = new List<Combo>();
+            
+            // 1. Calculate and Generate Global Numbers Pool
+            // We need to know which numbers to assign.
+            // Assumption: This method generates a continuous batch.
+            // But wait, if we are generating a LOTE (batch), we might be appending to existing bingo.
+            // However, the common use case is generating the whole bingo or a large chunk.
+            
+            // For now, let's assume we are generating indices sequentially based on what's being asked.
+            // We need to know the starting global index if we were appending, but typically we generate all at once?
+            // If the user asks for 10 combos, we generate (10 * kits * cartelas) global numbers.
+            // But the requirement is: "distributed randomly per kit".
+            
+            int totalCartelasNoLote = quantidade * kitsPorCombo * cartelasPorKit;
+            
+            // We need a way to track global numbering across batches if we support batches.
+            // But let's assume for this specific method scope, we are assigning numbers from a pool provided or created here.
+            
+            // To support random distribution ACROSS the whole bingo, we ideally should generate all cartelas first and then assign numbers?
+            // OR, we simply generate a list of numbers for this batch and shuffle them.
+            
+            // Let's generate a list of IDs for this batch relative to a "startGlobalIndex" if we had one.
+            // Since we don't have existing count passed in, we might assume startGlobalIndex = 1 if startCombo=1.
+            // Calculating startGlobalIndex:
+            int startGlobalIndex = ((startCombo - 1) * kitsPorCombo * cartelasPorKit) + 1;
+            
+            var globalNumbers = Enumerable.Range(startGlobalIndex, totalCartelasNoLote).ToList();
+            
+            // Shuffle the global numbers
+            int n = globalNumbers.Count;
+            while (n > 1)
+            {
+                n--;
+                int k = _random.Next(n + 1);
+                int value = globalNumbers[k];
+                globalNumbers[k] = globalNumbers[n];
+                globalNumbers[n] = value;
+            }
+            
+            int currentGlobalNumberIndex = 0;
 
             for (int i = 0; i < quantidade; i++)
             {
@@ -27,28 +66,44 @@ namespace BingoAdmin.Domain.Services
                     BingoId = bingoId,
                     NumeroCombo = numeroComboAtual,
                     Status = "Disponivel",
-                    Cartelas = new List<Cartela>()
+                    Kits = new List<Kit>()
                 };
 
-                for (int j = 1; j <= cartelasPorCombo; j++)
+                for (int k = 1; k <= kitsPorCombo; k++)
                 {
-                    Cartela cartela;
-                    do
+                    var kit = new Kit
                     {
-                        cartela = GerarUmaCartela(bingoId, 0, j); // ComboId will be set by EF when adding to list
-                    } while (hashesExistentes.Contains(cartela.HashUnico));
+                         NumeroKitNoCombo = k,
+                         Cartelas = new List<Cartela>()
+                    };
 
-                    hashesExistentes.Add(cartela.HashUnico);
-                    cartela.NumeroCartelaNoCombo = j;
-                    combo.Cartelas.Add(cartela);
+                    for (int c = 1; c <= cartelasPorKit; c++)
+                    {
+                        // Generate cartela
+                        Cartela cartela;
+                        do
+                        {
+                            cartela = GerarUmaCartela(bingoId, c); 
+                        } while (hashesExistentes.Contains(cartela.HashUnico));
+
+                        // Assign shuffled global number
+                        if (currentGlobalNumberIndex < globalNumbers.Count)
+                        {
+                            cartela.NumeroGlobal = globalNumbers[currentGlobalNumberIndex++];
+                        }
+
+                        hashesExistentes.Add(cartela.HashUnico);
+                        cartela.Kit = kit;
+                        kit.Cartelas.Add(cartela);
+                    }
+                    combo.Kits.Add(kit);
                 }
                 combos.Add(combo);
             }
-
             return combos;
         }
 
-        private Cartela GerarUmaCartela(int bingoId, int comboId, int numeroCartela)
+        private Cartela GerarUmaCartela(int bingoId, int numeroCartelaNoKit)
         {
             int[] b = GerarColuna(1, 15, 5);
             int[] i = GerarColuna(16, 30, 5);
@@ -74,8 +129,7 @@ namespace BingoAdmin.Domain.Services
             return new Cartela
             {
                 BingoId = bingoId,
-                ComboId = comboId,
-                NumeroCartelaNoCombo = numeroCartela,
+                NumeroCartelaNoKit = numeroCartelaNoKit,
                 GridNumeros = gridString,
                 HashUnico = gridString
             };

@@ -81,7 +81,7 @@
             <DataGrid.Columns>
                 <DataGridTextColumn Header="Combo #" Binding="{Binding NumeroCombo}" IsReadOnly="True" Width="80"/>
                 <DataGridTextColumn Header="Dono" Binding="{Binding NomeDono}" Width="*"/>
-                <DataGridComboBoxColumn Header="Status" SelectedItemBinding="{Binding Status, UpdateSourceTrigger=PropertyChanged}" Width="120" ElementStyle="{StaticResource ComboBoxColumnElementStyle}">
+                <DataGridComboBoxColumn Header="Status" SelectedItemBinding="{Binding Status, UpdateSourceTrigger=PropertyChanged}" Width="150" ElementStyle="{StaticResource ComboBoxColumnElementStyle}">
                     <DataGridComboBoxColumn.ItemsSource>
                         <x:Array Type="{x:Type sys:String}" xmlns:sys="clr-namespace:System;assembly=mscorlib">
                             <sys:String>Disponivel</sys:String>
@@ -90,15 +90,8 @@
                         </x:Array>
                     </DataGridComboBoxColumn.ItemsSource>
                 </DataGridComboBoxColumn>
-                <DataGridComboBoxColumn Header="Pagamento" SelectedItemBinding="{Binding Pagamento, UpdateSourceTrigger=PropertyChanged}" Width="120" ElementStyle="{StaticResource ComboBoxColumnElementStyle}">
-                    <DataGridComboBoxColumn.ItemsSource>
-                        <x:Array Type="{x:Type sys:String}" xmlns:sys="clr-namespace:System;assembly=mscorlib">
-                            <sys:String>-----</sys:String>
-                            <sys:String>Pendente</sys:String>
-                            <sys:String>Pago</sys:String>
-                        </x:Array>
-                    </DataGridComboBoxColumn.ItemsSource>
-                </DataGridComboBoxColumn>
+                <!-- Pagamento removido pois é automático baseado no status -->
+                <!-- <DataGridComboBoxColumn Header="Pagamento" ... /> -->
                 <DataGridTemplateColumn Header="Ações" Width="200">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>

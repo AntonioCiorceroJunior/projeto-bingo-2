@@ -63,7 +63,7 @@ namespace BingoAdmin.UI.Views
                     }
                 }
 
-                if (BingoSelector.Items.Count > 0) BingoSelector.SelectedIndex = 0;
+                if (bingos.Count > 0) BingoSelector.SelectedIndex = 0;
             }
         }
 

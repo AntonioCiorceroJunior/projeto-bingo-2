@@ -9,21 +9,34 @@ namespace BingoAdmin.UI.Services
     public class ComboService
     {
         private readonly BingoContext _context;
+        private readonly UserSession _userSession;
 
-        public ComboService(BingoContext context)
+        public ComboService(BingoContext context, UserSession userSession)
         {
             _context = context;
+            _userSession = userSession;
         }
 
         public List<Bingo> GetBingos()
         {
-            return _context.Bingos.OrderByDescending(b => b.DataInicioPrevista).ToList();
+            var userId = _userSession.CurrentUser?.Id ?? 0;
+            // var isAdmin = _userSession.IsAdmin; // Filtrando também para Admin para garantir "Meus Bingos"
+
+            var query = _context.Bingos.AsQueryable();
+
+            // if (!isAdmin)
+            {
+                query = query.Where(b => b.UsuarioCriadorId == userId);
+            }
+
+            return query.OrderByDescending(b => b.DataInicioPrevista).ToList();
         }
 
         public List<Combo> GetCombos(int bingoId)
         {
             return _context.Combos
-                .Include(c => c.Cartelas)
+                .Include(c => c.Kits)
+                .ThenInclude(k => k.Cartelas)
                 .Where(c => c.BingoId == bingoId)
                 .OrderBy(c => c.NumeroCombo)
                 .ToList();

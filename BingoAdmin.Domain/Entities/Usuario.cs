@@ -33,5 +33,9 @@ namespace BingoAdmin.Domain.Entities
         public bool JaUsouTesteGratis { get; set; } = false;
         public bool SolicitouTesteGratis { get; set; } = false;
         public string MotivoTesteGratis { get; set; } = string.Empty;
+
+        // Recuperação de Senha
+        public string? ResetToken { get; set; }
+        public DateTime? ResetTokenValidade { get; set; }
     }
 }

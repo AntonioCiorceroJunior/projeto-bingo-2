@@ -14,15 +14,17 @@ namespace BingoAdmin.UI.Services
         private readonly BingoContext _context;
         private readonly BingoService _bingoDomainService;
         private readonly BingoContextService _bingoContextService;
+        private readonly UserSession _userSession;
 
-        public BingoManagementService(BingoContext context, BingoService bingoDomainService, BingoContextService bingoContextService)
+        public BingoManagementService(BingoContext context, BingoService bingoDomainService, BingoContextService bingoContextService, UserSession userSession)
         {
             _context = context;
             _bingoDomainService = bingoDomainService;
             _bingoContextService = bingoContextService;
+            _userSession = userSession;
         }
 
-        public async Task<int> CriarBingoAsync(string nome, DateTime data, int qtdCombos, int cartelasPorCombo, List<RodadaConfigDto> rodadasConfig, bool modoDinamicoGlobal, List<int> padroesIds, IProgress<string> progress)
+        public async Task<int> CriarBingoAsync(string nome, DateTime data, int qtdCombos, int kitsPorCombo, int cartelasPorKit, bool temCombos, List<RodadaConfigDto> rodadasConfig, bool modoDinamicoGlobal, List<int> padroesIds, int modoJogo, IProgress<string> progress)
         {
             progress.Report("Iniciando criação do bingo...");
 
@@ -33,11 +35,14 @@ namespace BingoAdmin.UI.Services
                 Nome = nome,
                 DataInicioPrevista = data,
                 QuantidadeCombos = qtdCombos,
-                CartelasPorCombo = cartelasPorCombo,
+                TemCombos = temCombos,
+                KitsPorCombo = kitsPorCombo,
+                CartelasPorKit = cartelasPorKit,
                 QuantidadeRodadas = qtdRodadas,
                 ModoPadroesDinamicos = modoDinamicoGlobal,
+                ModoJogo = modoJogo,
                 Status = "Rascunho",
-                UsuarioCriadorId = 1 // TODO: Pegar do usuário logado
+                UsuarioCriadorId = _userSession.CurrentUser?.Id ?? 0
             };
 
             _context.Bingos.Add(bingo);
@@ -75,8 +80,24 @@ namespace BingoAdmin.UI.Services
                     EhRodadaExtra = false,
                     ModoPadroesDinamicos = config.ModoDinamico,
                     MaximoGanhadores = config.MaximoGanhadores,
-                    TipoJogo = config.TipoJogo
+                    TipoJogo = config.TipoJogo,
+                    ModoDisputaPremios = config.ModoDisputaPremios
                 };
+
+                if (config.Premios != null)
+                {
+                    foreach (var p in config.Premios)
+                    {
+                        rodada.Premios.Add(new Premio
+                        {
+                            Descricao = p.Descricao,
+                            Ordem = p.Ordem,
+                            Valor = p.Valor,
+                            PadraoId = p.PadraoId
+                        });
+                    }
+                }
+
                 _context.Rodadas.Add(rodada);
                 
                 // Se tiver padrões específicos para esta rodada (e modo dinâmico ativo)
@@ -131,7 +152,7 @@ namespace BingoAdmin.UI.Services
                     int startCombo = combosGerados + 1;
 
                     // Gera o lote na memória
-                    var loteCombos = _bingoDomainService.GerarLoteCombos(bingo.Id, startCombo, atual, cartelasPorCombo, hashesGlobais);
+                    var loteCombos = _bingoDomainService.GerarLoteCombos(bingo.Id, startCombo, atual, kitsPorCombo, cartelasPorKit, hashesGlobais);
 
                     // Salva o lote no banco
                     progress.Report($"Salvando lote {startCombo} a {startCombo + atual - 1}...");
@@ -155,20 +176,35 @@ namespace BingoAdmin.UI.Services
 
             progress.Report("Concluído!");
             
+            _bingoContextService.NotifyBingoListUpdated();
+
             return bingo.Id;
         }
 
-        public async Task AtualizarBingoAsync(int id, string nome, DateTime data, int qtdRodadas, List<RodadaConfigDto> rodadasConfig)
+        public async Task AtualizarBingoAsync(int id, string nome, DateTime data, int qtdRodadas, List<RodadaConfigDto> rodadasConfig, int modoJogo)
         {
-            var bingo = await _context.Bingos
+            var userId = _userSession.CurrentUser?.Id ?? 0;
+            // var isAdmin = _userSession.IsAdmin;
+            
+            var query = _context.Bingos
                 .Include(b => b.Rodadas)
                 .ThenInclude(r => r.RodadaPadroes)
-                .FirstOrDefaultAsync(b => b.Id == id);
+                .Include(b => b.Rodadas)
+                .ThenInclude(r => r.Premios)
+                .AsQueryable();
+
+            // if (!isAdmin)
+            {
+                query = query.Where(b => b.UsuarioCriadorId == userId);
+            }
+
+            var bingo = await query.FirstOrDefaultAsync(b => b.Id == id);
 
             if (bingo != null)
             {
                 bingo.Nome = nome;
                 bingo.DataInicioPrevista = data;
+                bingo.ModoJogo = modoJogo;
                 
                 // Ajustar quantidade de rodadas
                 if (qtdRodadas != bingo.QuantidadeRodadas)
@@ -215,6 +251,24 @@ namespace BingoAdmin.UI.Services
                         rodada.ModoPadroesDinamicos = config.ModoDinamico;
                         rodada.MaximoGanhadores = config.MaximoGanhadores;
                         rodada.TipoJogo = config.TipoJogo;
+                        rodada.ModoDisputaPremios = config.ModoDisputaPremios;
+
+                        // Update Prizes
+                        _context.Premios.RemoveRange(rodada.Premios);
+                        if (config.Premios != null)
+                        {
+                            foreach (var p in config.Premios)
+                            {
+                                _context.Premios.Add(new Premio
+                                {
+                                    RodadaId = rodada.Id,
+                                    Descricao = p.Descricao,
+                                    Ordem = p.Ordem,
+                                    Valor = p.Valor,
+                                    PadraoId = p.PadraoId
+                                });
+                            }
+                        }
 
                         // Atualizar padrões dinâmicos
                         if (config.ModoDinamico)
@@ -237,24 +291,117 @@ namespace BingoAdmin.UI.Services
                 }
 
                 await _context.SaveChangesAsync();
+                _bingoContextService.NotifyBingoListUpdated();
             }
         }
 
         public async Task ExcluirBingoAsync(int id)
         {
-            var bingo = await _context.Bingos.FindAsync(id);
-            if (bingo != null)
+            var userId = _userSession.CurrentUser?.Id ?? 0;
+            
+            // Check existence and permission manually first
+            var bingoExists = await _context.Bingos
+                .AnyAsync(b => b.Id == id && (b.UsuarioCriadorId == userId)); // Assuming permission logic is simplified here orisAdmin check needed
+
+            if (bingoExists)
             {
-                _context.Bingos.Remove(bingo);
-                await _context.SaveChangesAsync();
+                var strategy = _context.Database.CreateExecutionStrategy();
+                await strategy.ExecuteAsync(async () =>
+                {
+                    using var transaction = await _context.Database.BeginTransactionAsync();
+                    try
+                    {
+                        // 1. Delete deeply nested or related tables first using Raw SQL for performance
+                        // PedraMaiorSorteios (via Rodada)
+                        await _context.Database.ExecuteSqlRawAsync(
+                            "DELETE FROM PedraMaiorSorteios WHERE RodadaId IN (SELECT Id FROM Rodadas WHERE BingoId = {0})", id);
+
+                        // Ganhadores (via Rodada)
+                        await _context.Database.ExecuteSqlRawAsync(
+                            "DELETE FROM Ganhadores WHERE RodadaId IN (SELECT Id FROM Rodadas WHERE BingoId = {0})", id);
+
+                        // Premios (via Rodada or Direct BingoId)
+                        // Must happen AFTER Ganhadores (Ganhador -> Premio) and BEFORE Rodadas (Premio -> Rodada)
+                        await _context.Database.ExecuteSqlRawAsync(
+                            "DELETE FROM Premios WHERE BingoId = {0} OR RodadaId IN (SELECT Id FROM Rodadas WHERE BingoId = {0})", id);
+
+                        // DesempateItens (Direct BingoId)
+                        await _context.Database.ExecuteSqlRawAsync(
+                            "DELETE FROM DesempateItens WHERE BingoId = {0}", id);
+
+                        // RodadaPadroes (via Rodada)
+                        await _context.Database.ExecuteSqlRawAsync(
+                            "DELETE FROM RodadaPadroes WHERE RodadaId IN (SELECT Id FROM Rodadas WHERE BingoId = {0})", id);
+
+                        // Sorteios (Direct BingoId)
+                        await _context.Database.ExecuteSqlRawAsync(
+                            "DELETE FROM Sorteios WHERE BingoId = {0}", id);
+
+                        // Rodadas (Direct BingoId)
+                        // Must happen after child tables (Ganhadores, Sorteios, RodadaPadroes)
+                        await _context.Database.ExecuteSqlRawAsync(
+                            "DELETE FROM Rodadas WHERE BingoId = {0}", id);
+
+                        // Despesas (Direct BingoId)
+                        await _context.Database.ExecuteSqlRawAsync(
+                            "DELETE FROM Despesas WHERE BingoId = {0}", id);
+
+                        // Cartelas (Direct BingoId)
+                        // Must run BEFORE deleting Kits because Cartelas FK to Kits
+                        await _context.Database.ExecuteSqlRawAsync(
+                            "DELETE FROM Cartelas WHERE BingoId = {0}", id);
+
+                        // Kits (via Combos)
+                        await _context.Database.ExecuteSqlRawAsync(
+                            "DELETE FROM Kits WHERE ComboId IN (SELECT Id FROM Combos WHERE BingoId = {0})", id);
+                        
+                        // Ensure Kits are gone (tried above, but allow retry or re-order if needed)
+                        // Actually, better order: Cartelas -> Kits -> Combos.
+                        // Running Kits delete again won't hurt if empty, but let's just make sure Cartelas is before Kits if FK exists.
+                        // Based on entity provided `Cartela` has `KitId`. So Cartela must be deleted BEFORE Kit.
+                        
+                        // Combos (Direct BingoId)
+                        await _context.Database.ExecuteSqlRawAsync(
+                            "DELETE FROM Combos WHERE BingoId = {0}", id);
+
+                        // BingoPadroes (Direct BingoId)
+                        await _context.Database.ExecuteSqlRawAsync(
+                            "DELETE FROM BingoPadroes WHERE BingoId = {0}", id);
+
+                        // Finally, delete the Bingo
+                        await _context.Database.ExecuteSqlRawAsync(
+                            "DELETE FROM Bingos WHERE Id = {0}", id);
+
+                        await transaction.CommitAsync();
+                        _bingoContextService.NotifyBingoListUpdated();
+                    }
+                    catch (Exception)
+                    {
+                        await transaction.RollbackAsync();
+                        throw;
+                    }
+                });
             }
         }
 
         public async Task<List<Bingo>> ListarBingosAsync()
         {
-            return await _context.Bingos
+            var userId = _userSession.CurrentUser?.Id ?? 0;
+            // var isAdmin = _userSession.IsAdmin;
+
+            var query = _context.Bingos
                 .Include(b => b.Rodadas)
                 .ThenInclude(r => r.RodadaPadroes)
+                .Include(b => b.Rodadas)
+                .ThenInclude(r => r.Premios)
+                .AsQueryable();
+
+            // if (!isAdmin)
+            {
+                query = query.Where(b => b.UsuarioCriadorId == userId);
+            }
+
+            return await query
                 .OrderByDescending(b => b.DataInicioPrevista)
                 .ToListAsync();
         }
@@ -269,5 +416,15 @@ namespace BingoAdmin.UI.Services
         public int? MaximoGanhadores { get; set; }
         public string TipoJogo { get; set; } = "Padrao";
         public List<int> PadroesIds { get; set; } = new();
+        public int ModoDisputaPremios { get; set; }
+        public List<PremioDto> Premios { get; set; } = new();
+    }
+
+    public class PremioDto
+    {
+        public string Descricao { get; set; } = string.Empty;
+        public int Ordem { get; set; }
+        public decimal? Valor { get; set; }
+        public int? PadraoId { get; set; } // Added PadraoId
     }
 }

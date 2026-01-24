@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using BingoAdmin.Domain.Entities;
@@ -11,7 +12,22 @@ namespace BingoAdmin.UI.Services
     {
         public void GenerateComboPdf(Combo combo, string bingoName, string filePath)
         {
-            var cartelas = combo.Cartelas.OrderBy(c => c.NumeroCartelaNoCombo).ToList();
+            // Prepare items with Kit context
+            var renderItems = new List<(Cartela Cartela, int KitNumero)>();
+
+            if (combo.Kits != null)
+            {
+               foreach(var kit in combo.Kits.OrderBy(k => k.NumeroKitNoCombo))
+               {
+                   if (kit.Cartelas != null)
+                   {
+                        foreach(var cartela in kit.Cartelas.OrderBy(c => c.NumeroCartelaNoKit))
+                        {
+                            renderItems.Add((cartela, kit.NumeroKitNoCombo));
+                        }
+                   }
+               }
+            }
 
             Document.Create(container =>
             {
@@ -33,11 +49,10 @@ namespace BingoAdmin.UI.Services
                         .PaddingVertical(1, Unit.Centimetre)
                         .Column(column =>
                         {
-                            var chunks = cartelas.Chunk(4).ToList();
-
-                            for (int i = 0; i < chunks.Count; i++)
+                            int batchSize = 4;
+                            for (int i = 0; i < renderItems.Count; i += batchSize)
                             {
-                                var chunk = chunks[i];
+                                var chunk = renderItems.Skip(i).Take(batchSize).ToList();
 
                                 column.Item().Table(table =>
                                 {
@@ -47,13 +62,13 @@ namespace BingoAdmin.UI.Services
                                         columns.RelativeColumn();
                                     });
 
-                                    foreach (var cartela in chunk)
+                                    foreach (var item in chunk)
                                     {
-                                        table.Cell().Padding(10).Element(e => RenderCartela(e, cartela, combo.NumeroCombo, combo.NomeDono));
+                                        table.Cell().Padding(10).Element(e => RenderCartela(e, item.Cartela, combo.NumeroCombo, item.KitNumero, combo.NomeDono, item.Cartela.NumeroGlobal));
                                     }
                                 });
 
-                                if (i < chunks.Count - 1)
+                                if (i + batchSize < renderItems.Count)
                                 {
                                     column.Item().PageBreak();
                                 }
@@ -72,10 +87,11 @@ namespace BingoAdmin.UI.Services
             .GeneratePdf(filePath);
         }
 
-        private void RenderCartela(IContainer container, Cartela cartela, int comboNumero, string nomeDono)
+        private void RenderCartela(IContainer container, Cartela cartela, int comboNumero, int kitNumero, string nomeDono, int numeroCartelaGlobal)
         {
             var blueColor = "#5DADE2";
             var grayColor = "#CCCCCC";
+            var redColor = Colors.Red.Darken2; // Red Dark for Global Number
 
             container
                 .ShowEntire()
@@ -85,10 +101,18 @@ namespace BingoAdmin.UI.Services
                 .Padding(10)
                 .Column(column =>
                 {
-                    column.Item().AlignCenter().Text($"CARTELA {cartela.NumeroCartelaNoCombo}")
-                        .FontSize(18).ExtraBold().FontColor(Colors.Black);
+                    // Header - Stacked to avoid overlap
+                    column.Item().PaddingBottom(0).AlignRight().Text($"Nº {numeroCartelaGlobal:D4}")
+                        .FontSize(10).Bold().FontColor(redColor);
+
+                    column.Item().PaddingBottom(5).AlignCenter().Text(text => 
+                    {
+                        text.Span($"CARTELA {cartela.NumeroCartelaNoKit}").FontSize(14).Black().ExtraBold();
+                        text.Span($" | KIT {kitNumero} | COMBO {comboNumero}").FontSize(14).Black().NormalWeight();
+                    });
                     
-                    column.Item().PaddingBottom(10).AlignCenter().Text($"{nomeDono} | Combo {comboNumero}")
+                    // Owner Name
+                    column.Item().PaddingBottom(5).AlignCenter().Text($"{nomeDono}")
                         .FontSize(12).FontColor(Colors.Grey.Darken2);
 
                     column.Item().Table(grid =>

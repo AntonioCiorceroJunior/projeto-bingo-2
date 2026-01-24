@@ -8,6 +8,7 @@ IMPORTANTE SOBRE MIM
   - Sempre me entregue listas de tarefas em formato de CHECKLIST.
   - NÃO misture muitos assuntos ao mesmo tempo.
   - Em cada resposta, foque em UMA FASE por vez (por exemplo: primeiro só landing page, depois API, depois outra coisa).
+  - SEMPRE responda em Português do Brasil (pt-BR).
   - Ao final de cada resposta, sempre pergunte: "Quer que eu te ajude a executar a próxima etapa?" em vez de já avançar sozinho.
 
 ====================================

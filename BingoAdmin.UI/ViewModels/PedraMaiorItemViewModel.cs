@@ -11,6 +11,7 @@ namespace BingoAdmin.UI.ViewModels
         public string Nome { get; set; } = string.Empty;
         public string ComboNumero { get; set; } = string.Empty;
         public string NumeroCartela { get; set; } = string.Empty;
+        public string NomeKit { get; set; } = string.Empty;
         public string NomePadrao { get; set; } = string.Empty;
         
         // We can keep the original info loosely typed or reference the specific type if available globally

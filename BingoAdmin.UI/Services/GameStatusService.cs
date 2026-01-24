@@ -19,9 +19,42 @@ namespace BingoAdmin.UI.Services
         private bool _isWinnerOverlayVisible = false;
         private string _winnerOverlayTitle = "";
         private string _winnerOverlayMessage = "";
+        private string _currentPrizeDescription = "";
+        private string _currentPrizeValue = "";
+        private string _currentPrizePatternName = "";
 
         public ObservableCollection<string> RecentBalls { get; } = new ObservableCollection<string>();
         public ObservableCollection<PedraMaiorItemViewModel> PedraMaiorParticipants { get; } = new ObservableCollection<PedraMaiorItemViewModel>();
+
+        public string CurrentPrizeDescription
+        {
+            get => _currentPrizeDescription;
+            set
+            {
+                _currentPrizeDescription = value;
+                OnPropertyChanged(nameof(CurrentPrizeDescription));
+            }
+        }
+
+        public string CurrentPrizeValue
+        {
+            get => _currentPrizeValue;
+            set
+            {
+                _currentPrizeValue = value;
+                OnPropertyChanged(nameof(CurrentPrizeValue));
+            }
+        }
+
+        public string CurrentPrizePatternName
+        {
+            get => _currentPrizePatternName;
+            set
+            {
+                _currentPrizePatternName = value;
+                OnPropertyChanged(nameof(CurrentPrizePatternName));
+            }
+        }
 
         public bool IsWinnerOverlayVisible
         {

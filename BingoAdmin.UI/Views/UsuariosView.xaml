@@ -37,6 +37,8 @@
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
                             <StackPanel Orientation="Horizontal">
+                                <Button Content="ACESSAR" Margin="2" Padding="5,2" Background="#8e44ad" Foreground="White" FontWeight="Bold"
+                                        Click="Impersonate_Click" Tag="{Binding Id}" ToolTip="Ver painel como este usuário"/>
                                 <Button Content="30 Dias" Margin="2" Padding="5,2" Background="#2ecc71" Foreground="White" 
                                         Click="Add30Days_Click" Tag="{Binding Id}"/>
                                 <Button Content="1 Dia" Margin="2" Padding="5,2" Background="#3498db" Foreground="White" 

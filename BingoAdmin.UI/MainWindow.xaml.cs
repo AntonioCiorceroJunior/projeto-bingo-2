@@ -2,6 +2,7 @@
 using System.IO;
 using System.Text.Json;
 using System.Windows;
+using System.Windows.Input;
 using BingoAdmin.UI.Views;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -16,6 +17,10 @@ namespace BingoAdmin.UI
         {
             InitializeComponent();
             _serviceProvider = serviceProvider;
+
+            // Desabilita a navegação por Backspace no Frame
+            NavigationCommands.BrowseBack.InputGestures.Clear();
+            NavigationCommands.BrowseForward.InputGestures.Clear();
             
             this.Loaded += OnLoaded;
             this.Closing += OnClosing;
@@ -23,68 +28,79 @@ namespace BingoAdmin.UI
 
         private void OnLoaded(object sender, RoutedEventArgs e)
         {
-            bool restored = false;
+            try
+            {
+                File.AppendAllText("startup_log.txt", $"{DateTime.Now:HH:mm:ss} - MainWindow_Loaded started.\n");
+                
+                bool restored = false;
+                if (File.Exists(StateFile))
+                {
+                    try
+                    {
+                        var json = File.ReadAllText(StateFile);
+                        var state = JsonSerializer.Deserialize<UiState>(json);
+                        if (state != null)
+                        {
+                            // Restore Window Position
+                            if (state.Width > 0 && state.Height > 0)
+                            {
+                                this.Top = state.Top;
+                                this.Left = state.Left;
+                                this.Width = state.Width;
+                                this.Height = state.Height;
+                                this.WindowState = state.WindowState;
+                            }
+                        }
+                    }
+                    catch { }
+                }
+
+                // Always navigate to LoginView on startup
+                File.AppendAllText("startup_log.txt", $"{DateTime.Now:HH:mm:ss} - Resolving LoginView...\n");
+                var loginView = _serviceProvider.GetRequiredService<LoginView>();
+                
+                File.AppendAllText("startup_log.txt", $"{DateTime.Now:HH:mm:ss} - Navigating to LoginView...\n");
+                MainFrame.Navigate(loginView);
+                File.AppendAllText("startup_log.txt", $"{DateTime.Now:HH:mm:ss} - Navigation command issued.\n");
+            }
+            catch (Exception ex)
+            {
+                File.AppendAllText("startup_log.txt", $"{DateTime.Now:HH:mm:ss} - ERROR IN MAINWINDOW_LOADED: {ex}\n");
+                MessageBox.Show($"FATAL ERROR IN LOADED: {ex.Message}\n{ex.InnerException?.Message}", "Error");
+            }
+        }
+
+        private void OnClosing(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            UiState state = new UiState();
+
+            // Try to load existing state to preserve credentials
             if (File.Exists(StateFile))
             {
                 try
                 {
-                    var json = File.ReadAllText(StateFile);
-                    var state = JsonSerializer.Deserialize<UiState>(json);
-                    if (state != null)
+                    var existingJson = File.ReadAllText(StateFile);
+                    var existingState = JsonSerializer.Deserialize<UiState>(existingJson);
+                    if (existingState != null)
                     {
-                        // Restore Window Position
-                        if (state.Width > 0 && state.Height > 0)
-                        {
-                            this.Top = state.Top;
-                            this.Left = state.Left;
-                            this.Width = state.Width;
-                            this.Height = state.Height;
-                            this.WindowState = state.WindowState;
-                        }
-
-                        // View restoration disabled to enforce login
-                        /*
-                        if (!string.IsNullOrEmpty(state.LastView))
-                        {
-                            if (state.LastView == nameof(GameView))
-                            {
-                                var view = _serviceProvider.GetRequiredService<GameView>();
-                                MainFrame.Navigate(view);
-                                restored = true;
-                            }
-                            else if (state.LastView == nameof(DashboardView))
-                            {
-                                var view = _serviceProvider.GetRequiredService<DashboardView>();
-                                MainFrame.Navigate(view);
-                                restored = true;
-                            }
-                        }
-                        */
+                        state = existingState;
                     }
                 }
                 catch { }
             }
 
-            // Always navigate to LoginView on startup
-            var loginView = _serviceProvider.GetRequiredService<LoginView>();
-            MainFrame.Navigate(loginView);
-        }
-
-        private void OnClosing(object sender, System.ComponentModel.CancelEventArgs e)
-        {
-            var state = new UiState
-            {
-                Top = this.Top,
-                Left = this.Left,
-                Width = this.Width,
-                Height = this.Height,
-                WindowState = this.WindowState,
-                LastView = MainFrame.Content?.GetType().Name ?? ""
-            };
+            // Update Window settings
+            state.Top = this.Top;
+            state.Left = this.Left;
+            state.Width = this.Width;
+            state.Height = this.Height;
+            state.WindowState = this.WindowState;
+            state.LastView = MainFrame.Content?.GetType().Name ?? "";
 
             try
             {
-                var json = JsonSerializer.Serialize(state);
+                var options = new JsonSerializerOptions { WriteIndented = true };
+                var json = JsonSerializer.Serialize(state, options);
                 File.WriteAllText(StateFile, json);
             }
             catch { }
@@ -99,5 +115,10 @@ namespace BingoAdmin.UI
         public double Height { get; set; }
         public WindowState WindowState { get; set; }
         public string LastView { get; set; } = "";
+        
+        // Remember Me credentials
+        public bool RememberMe { get; set; }
+        public string SavedEmail { get; set; } = "";
+        public string SavedPassword { get; set; } = ""; // Simple storage as requested
     }
 }

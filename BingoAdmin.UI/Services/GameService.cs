@@ -22,7 +22,12 @@ namespace BingoAdmin.UI.Services
         private readonly GameStatusService _gameStatusService;
         private readonly BingoContextService _bingoContextService;
         private readonly ISpeechService _speechService;
+        private readonly UserSession _userSession;
+        private string _lastAnnouncedPrize = string.Empty;
         
+        // Armazena perdedores da pedra maior por rodada e padrão: Key="RodadaId_PadraoId", Value=Set<CartelaId>
+        private Dictionary<string, HashSet<int>> _perdedoresPorPadrao = new();
+
         public bool ModoUnicoAtivo { get; set; } = false;
 
         public event Action<int>? OnNumeroSorteado;
@@ -30,15 +35,16 @@ namespace BingoAdmin.UI.Services
         public event Action<string>? OnPadraoDinamicoSorteado; // Evento para notificar UI
         public event Action? OnRodadaReiniciada; // Evento para notificar UI que a rodada foi reiniciada
         public event Action? OnRodadaEncerrada; // Evento para notificar UI que a rodada foi encerrada automaticamente
-        public event Action<PorUmaBolaStats>? OnPorUmaBolaAtualizado; // Evento para notificar UI sobre estatísticas "Por Uma Bola"
+        public event Action<PorUmaBolaStats>? OnPorUmaBolaCountChanged; // Changed to full object for stats display
 
-        public GameService(BingoContext context, FeedService feedService, GameStatusService gameStatusService, BingoContextService bingoContextService, ISpeechService speechService)
+        public GameService(BingoContext context, FeedService feedService, GameStatusService gameStatusService, BingoContextService bingoContextService, ISpeechService speechService, UserSession userSession)
         {
             _context = context;
             _feedService = feedService;
             _gameStatusService = gameStatusService;
             _bingoContextService = bingoContextService;
             _speechService = speechService;
+            _userSession = userSession;
         }
 
         public void CarregarDadosBingo(int bingoId)
@@ -47,7 +53,21 @@ namespace BingoAdmin.UI.Services
             // _feedService.AddMessage("Sistema", "Carregando dados do Bingo...", "Info"); // Reduced verbosity
             _cachedCartelas.Clear();
             
-            var bingo = _context.Bingos.FirstOrDefault(b => b.Id == bingoId);
+            var query = _context.Bingos.AsQueryable();
+            // if (!_userSession.IsAdmin)
+            {
+               var userId = _userSession.CurrentUser?.Id ?? 0;
+               query = query.Where(b => b.UsuarioCriadorId == userId);
+            }
+
+            var bingo = query.FirstOrDefault(b => b.Id == bingoId);
+            
+            if (bingo == null)
+            {
+                // Se o bingo não existe ou não pertence ao usuário
+                throw new Exception("Bingo não encontrado ou acesso negado.");
+            }
+
             if (bingo != null)
             {
                 _feedService.SwitchBingoContext(bingoId, bingo.Nome);
@@ -82,12 +102,15 @@ namespace BingoAdmin.UI.Services
             }
 
             var cartelas = _context.Cartelas
-                .Include(c => c.Combo)
+                .Include(c => c.Kit)
+                .ThenInclude(k => k.Combo)
                 .Where(c => c.BingoId == bingoId)
+                // Filter: Only participam combos Confirmados (que implicam Pagamento = Pago)
+                .Where(c => c.Kit.Combo.Status == "Confirmado")
                 .ToList();
 
             // Group by Combo to determine index
-            var cartelasPorCombo = cartelas.GroupBy(c => c.ComboId);
+            var cartelasPorCombo = cartelas.GroupBy(c => c.Kit?.ComboId ?? 0);
 
             foreach (var group in cartelasPorCombo)
             {
@@ -98,23 +121,87 @@ namespace BingoAdmin.UI.Services
                     _cachedCartelas.Add(new CachedCartela
                     {
                         Id = c.Id,
-                        ComboNumero = c.Combo?.NumeroCombo ?? 0,
+                        ComboNumero = c.Kit?.Combo?.NumeroCombo ?? 0,
                         NumeroCartela = index++,
-                        Dono = c.Combo?.NomeDono ?? "Desconhecido",
+                        Dono = c.Kit?.Combo?.NomeDono ?? "Desconhecido",
+                        NomeKit = c.Kit != null ? $"Kit {c.Kit.NumeroKitNoCombo}" : "Kit Padrão",
+                        CodigoValidacao = c.NumeroGlobal.ToString(), // Usando NumeroGlobal como Série
                         Numeros = nums
                     });
                 }
             }
         }
 
+        public void RegistrarGanhadorPedraMaior(int cartelaId)
+        {
+            var cartela = _cachedCartelas.FirstOrDefault(c => c.Id == cartelaId);
+            if (cartela == null) return;
+
+            // Adicionar à lista de ganhadores processados em memória
+            if (!_ganhadoresIds.Contains(cartelaId))
+            {
+                _ganhadoresIds.Add(cartelaId);
+            }
+
+            // Salvar no banco como vencedor final
+            if (_rodadaAtual != null)
+            {
+                var jaSalvo = _context.Ganhadores.Any(x => x.RodadaId == _rodadaAtual.Id && x.CartelaId == cartelaId);
+                if (!jaSalvo)
+                {
+                    _context.Ganhadores.Add(new Ganhador
+                    {
+                        RodadaId = _rodadaAtual.Id,
+                        CartelaId = cartelaId,
+                        IsVencedorFinal = true
+                    });
+                    _context.SaveChanges();
+                }
+                else
+                {
+                    // Update existing if needed (e.g. from false to true)
+                    var g = _context.Ganhadores.First(x => x.RodadaId == _rodadaAtual.Id && x.CartelaId == cartelaId);
+                    g.IsVencedorFinal = true;
+                    _context.SaveChanges();
+                }
+            }
+        }
+
+        public void RegistrarPerdedoresPedraMaior(List<int> cartelaIds, int premioId)
+        {
+            if (_rodadaAtual == null) return;
+
+            // Busca o Padrão associado ao prêmio
+            var premio = _context.Premios.Find(premioId);
+            if (premio == null || premio.PadraoId == null) return;
+            
+            int padraoId = premio.PadraoId.Value;
+            string key = $"{_rodadaAtual.Id}_{padraoId}";
+
+            if (!_perdedoresPorPadrao.ContainsKey(key))
+            {
+                _perdedoresPorPadrao[key] = new HashSet<int>();
+            }
+
+            foreach (var cid in cartelaIds)
+            {
+                _perdedoresPorPadrao[key].Add(cid);
+            }
+            
+            _feedService.AddMessage("Sistema", $"{cartelaIds.Count} cartela(s) eliminada(s) do padrão {premio.Padrao?.Nome} após disputa de Pedra Maior.", "Info");
+        }
+
         public void IniciarRodada(int rodadaId)
         {
+            _lastAnnouncedPrize = string.Empty;
+            _perdedoresPorPadrao.Clear();
             // _feedService.AddMessage("Rodada", $"Iniciando rodada {rodadaId}...", "Info"); // Reduced verbosity as requested
             _gameStatusService.ClearRecentBalls();
 
             _rodadaAtual = _context.Rodadas
                 .Include(r => r.Padrao)
                 .Include(r => r.Bingo)
+                .Include(r => r.Premios).ThenInclude(p => p.Padrao)
                 .FirstOrDefault(r => r.Id == rodadaId);
 
             if (_rodadaAtual == null) throw new Exception("Rodada não encontrada");
@@ -207,6 +294,8 @@ namespace BingoAdmin.UI.Services
                 _rodadaAtual.Status = "EmAndamento";
                 _context.SaveChanges();
             }
+
+            UpdateCurrentPrizeInfo();
         }
 
         public void AtualizarPadrao(Padrao padrao)
@@ -310,69 +399,35 @@ namespace BingoAdmin.UI.Services
 
             // Calcular estatísticas "Por Uma Bola" após verificar ganhadores
             var stats = CalcularStatsPorUmaBola();
-            OnPorUmaBolaAtualizado?.Invoke(stats);
-
-            // Verificar se deve anunciar o número mais esperado
-            VerificarLocucaoPorUmaBola(stats);
+            OnPorUmaBolaCountChanged?.Invoke(stats);
 
             return numero;
         }
 
-        private void VerificarLocucaoPorUmaBola(PorUmaBolaStats stats)
-        {
-            if (stats.TotalCartelasPorUma > 0 && stats.NumerosMaisEsperados.Any())
-            {
-                // Encontrar o número mais esperado
-                var topNumber = stats.NumerosMaisEsperados.OrderByDescending(x => x.Value).First();
-                
-                // Lógica para não falar toda hora (ex: apenas se tiver mais de 3 pessoas esperando o mesmo número, ou aleatoriamente)
-                // Vamos usar uma probabilidade de 20% para não ficar repetitivo, ou se tiver muita gente (ex: > 5)
-                
-                bool deveFalar = false;
-                if (topNumber.Value >= 5) deveFalar = true; // Muita gente esperando, fala sempre (ou quase)
-                else if (_random.Next(0, 10) < 2) deveFalar = true; // 20% de chance para números com menos espera
 
-                if (deveFalar)
-                {
-                    // Evitar falar se acabou de falar (poderíamos ter um timer, mas por enquanto vamos confiar no aleatório)
-                    // Frase: "Temos X pessoas esperando pelo número Y... Quem será que irá ganhar?"
-                    string frase = $"Temos {topNumber.Value} pessoas esperando pelo número {topNumber.Key}... Quem será que irá ganhar?";
-                    
-                    // Usar um método específico no SpeechService para não cortar o número sorteado imediatamente se possível,
-                    // mas como o SpeakBall já foi chamado, ele vai enfileirar ou tocar depois?
-                    // O SpeechService atual usa StopAllAudio() no Speak(). Isso cortaria o número sorteado.
-                    // Precisamos melhorar o SpeechService ou chamar isso com atraso.
-                    
-                    // Como o SpeakBall usa MCI ou GoogleTTS e o Speak usa GoogleTTS com StopAllAudio, 
-                    // se chamarmos Speak agora, ele vai cortar o "B 5".
-                    // O ideal é que o SpeakBall seja prioritário e essa frase venha depois.
-                    
-                    // Vamos tentar chamar o Speak, mas sabendo que pode cortar. 
-                    // O ideal seria o SpeechService ter uma fila.
-                    // Por enquanto, vamos apenas chamar e ver se o usuário aceita, ou melhor, vamos fazer um Task.Delay
-                    
-                    Task.Run(async () => 
-                    {
-                        await Task.Delay(3000); // Espera 3 segundos (tempo para falar a bola)
-                        _speechService.Speak(frase);
-                    });
-                }
-            }
-        }
+        // Logic removed - moved to UI
+
 
         private void VerificarGanhadores()
         {
-            if (_rodadaAtual != null && _rodadaAtual.TipoJogo == "PeFrio")
+            if (_rodadaAtual != null)
             {
-                VerificarGanhadoresPeFrio();
-            }
-            else
-            {
-                VerificarGanhadoresPadrao();
+                if (_rodadaAtual.TipoJogo == "PeFrio")
+                {
+                    VerificarGanhadoresPeFrio();
+                }
+                else if (_rodadaAtual.Bingo?.ModoJogo == 1) // Modo Acumulado
+                {
+                    VerificarGanhadoresAcumulado();
+                }
+                else // Modo Clássico
+                {
+                    VerificarGanhadoresPadrao();
+                }
             }
 
-            // Check Max Winners
-            if (_rodadaAtual != null && _rodadaAtual.MaximoGanhadores.HasValue && _rodadaAtual.MaximoGanhadores > 0)
+            // Check Max Winners (Only for Classic, as Accumulated handles it via Prizes)
+            if (_rodadaAtual != null && _rodadaAtual.Bingo?.ModoJogo != 1 && _rodadaAtual.MaximoGanhadores.HasValue && _rodadaAtual.MaximoGanhadores > 0)
             {
                 // Re-fetch winners count because _ganhadoresIds might have been updated
                 if (_ganhadoresIds.Count >= _rodadaAtual.MaximoGanhadores.Value)
@@ -387,6 +442,104 @@ namespace BingoAdmin.UI.Services
                 }
             }
         }
+
+        private void VerificarGanhadoresAcumulado()
+        {
+            if (_rodadaAtual == null) return;
+
+            var novosGanhadores = new List<GanhadorInfo>();
+            var hasPrizes = _rodadaAtual.Premios != null && _rodadaAtual.Premios.Any();
+            
+            // DEBUG: DIAGNOSTICO DE RODADA
+            if (_numerosSorteados.Count > 0 && _numerosSorteados.Count % 10 == 0) // Loga a cada 10 bolas para não floodar
+            {
+                 // _feedService.AddMessage("DEBUG", $"Validando {_rodadaAtual.Premios?.Count ?? 0} prêmios no modo ACUMULADO.", "Info");
+            }
+
+            if (!hasPrizes) return;
+
+            // 1. Obter todos os prêmios da rodada, agrupados por PADRÃO
+            var premiosPorPadrao = _rodadaAtual.Premios
+                .GroupBy(p => p.PadraoId ?? 0)
+                .ToDictionary(g => g.Key, g => g.OrderBy(p => p.Ordem).ToList());
+
+            // 2. Para cada padrão, descobrir qual é o "Prêmio da Vez"
+            foreach (var kvp in premiosPorPadrao)
+            {
+                int padraoId = kvp.Key;
+                var premiosDoPadrao = kvp.Value;
+                
+                if (padraoId == 0) continue; 
+                
+                string keyPerdedores = $"{_rodadaAtual.Id}_{padraoId}";
+                HashSet<int> perdedoresDestePadrao = _perdedoresPorPadrao.ContainsKey(keyPerdedores) 
+                    ? _perdedoresPorPadrao[keyPerdedores] 
+                    : new HashSet<int>();
+
+                // Descobre quais prêmios DESSA FILA já foram pagos
+                var premiosPagosIds = _context.Ganhadores
+                    .Where(g => g.RodadaId == _rodadaAtual.Id && g.Premio != null && g.Premio.PadraoId == padraoId)
+                    .Select(g => g.PremioId!.Value)
+                    .Distinct()
+                    .ToHashSet();
+                
+                // Pega o primeiro prêmio da fila que AINDA NÃO FOI PAGO
+                var premioDaVez = premiosDoPadrao.FirstOrDefault(p => !premiosPagosIds.Contains(p.Id));
+                
+                if (premioDaVez == null) continue;
+
+                // DIAGNOSTICO CRITICO: Verificar Máscara
+                string mascara;
+                string nomePadrao;
+
+                if (premioDaVez.Padrao != null)
+                {
+                    mascara = premioDaVez.Padrao.Mascara;
+                    nomePadrao = premioDaVez.Padrao.Nome;
+                }
+                else
+                {
+                    // SE ENTRAR AQUI, É O PROBLEMA: O prêmio existe mas perdeu o link com o padrão
+                    mascara = new string('1', 25);
+                    nomePadrao = "Padrão Desconhecido (Fallback Cheia)";
+                    
+                    if (_numerosSorteados.Count % 5 == 0) // Log de alerta ocasional
+                    {
+                        _feedService.AddMessage("ALERTA", $"Prêmio '{premioDaVez.Descricao}' está sem Padrão vinculado! Usando Cartela Cheia.", "Warning");
+                    }
+                }
+
+                foreach (var cartela in _cachedCartelas)
+                {
+                    if (perdedoresDestePadrao.Contains(cartela.Id)) continue;
+                    
+                    // Se já ganhou QUALQUER coisa na rodada, tá fora.
+                    if (_ganhadoresIds.Contains(cartela.Id)) continue;
+
+                    if (VerificarMascara(cartela.Numeros, mascara))
+                    {
+                        var info = CreateGanhadorInfo(cartela, nomePadrao, mascara);
+                        info.PremioId = premioDaVez.Id;
+                        info.NomePremio = premioDaVez.Descricao;
+                        info.ValorPremio = premioDaVez.Valor;
+                        
+                        novosGanhadores.Add(info);
+                    }
+                }
+            }
+
+
+            if (novosGanhadores.Any())
+            {
+                // Agrupa e processa (pode haver ganhadores de Quina e Cheia simultaneamente)
+                var groups = novosGanhadores.GroupBy(g => g.PremioId);
+                foreach(var group in groups)
+                {
+                    ProcessarNovosGanhadores(group.ToList());
+                }
+            }
+        }
+
 
         private void VerificarGanhadoresPeFrio()
         {
@@ -438,6 +591,7 @@ namespace BingoAdmin.UI.Services
                     ComboNumero = winner.ComboNumero, 
                     NumeroCartela = winner.NumeroCartela, 
                     NomeDono = winner.Dono,
+                    NomeKit = winner.NomeKit,
                     NomePadrao = "Pé Frio (Invicto)"
                 });
             }
@@ -452,6 +606,7 @@ namespace BingoAdmin.UI.Services
                         ComboNumero = c.ComboNumero, 
                         NumeroCartela = c.NumeroCartela, 
                         NomeDono = c.Dono,
+                        NomeKit = c.NomeKit,
                         NomePadrao = "Pé Frio (Último a marcar)"
                     });
                 }
@@ -467,6 +622,7 @@ namespace BingoAdmin.UI.Services
                         ComboNumero = c.ComboNumero, 
                         NumeroCartela = c.NumeroCartela, 
                         NomeDono = c.Dono,
+                        NomeKit = c.NomeKit,
                         NomePadrao = "Pé Frio (Empate Final)"
                     });
                 }
@@ -483,37 +639,54 @@ namespace BingoAdmin.UI.Services
             var novosGanhadores = new List<GanhadorInfo>();
             var padroesSorteadosNestaVerificacao = new HashSet<int>();
 
+            // 1. Identify Target Rules
+            var hasDynamicPatterns = _padroesDinamicosAtivos.Any();
+            var hasPrizes = _rodadaAtual?.Premios != null && _rodadaAtual.Premios.Any();
+            
+            List<Premio> targetPrizes = new List<Premio>();
+            if (hasPrizes)
+            {
+                // Check against DB for prizes already won this round
+                var wonPrizeIds = _context.Ganhadores
+                    .Where(g => g.RodadaId == _rodadaAtual!.Id && g.PremioId.HasValue)
+                    .Select(g => g.PremioId!.Value)
+                    .ToHashSet();
+
+                var availablePrizes = _rodadaAtual!.Premios
+                    .Where(p => !wonPrizeIds.Contains(p.Id))
+                    .OrderBy(p => p.Ordem)
+                    .ToList();
+
+                if (_rodadaAtual.Bingo?.ModoJogo == 1) // Accumulated
+                {
+                    targetPrizes = availablePrizes; // Check all active prizes
+                }
+                else // Standard (Sequential)
+                {
+                    if (availablePrizes.Any())
+                        targetPrizes.Add(availablePrizes.First()); // Check only the next prize
+                }
+            }
+
+            // 2. Iterate Cartelas
             foreach (var cartela in _cachedCartelas)
             {
-                if (_ganhadoresIds.Contains(cartela.Id)) continue;
+                bool alreadyWonInRound = _ganhadoresIds.Contains(cartela.Id);
 
-                // Se modo dinâmico, verifica contra todos os padrões ativos
-                if (_padroesDinamicosAtivos.Any())
+                // --- Dynamic Patterns Logic ---
+                if (hasDynamicPatterns && !alreadyWonInRound)
                 {
                     foreach (var bp in _padroesDinamicosAtivos)
                     {
-                        // if (padroesSorteadosNestaVerificacao.Contains(bp.Id)) continue; // Permitir empate no mesmo padrão na mesma bola
+                        // if (padroesSorteadosNestaVerificacao.Contains(bp.Id)) continue; 
 
                         if (bp.Padrao == null) continue;
 
                         if (VerificarMascara(cartela.Numeros, bp.Padrao.Mascara))
                         {
-                            novosGanhadores.Add(new GanhadorInfo 
-                            { 
-                                CartelaId = cartela.Id, 
-                                ComboNumero = cartela.ComboNumero,
-                                NumeroCartela = cartela.NumeroCartela,
-                                NomeDono = cartela.Dono,
-                                NomePadrao = bp.Padrao.Nome, // Adicionar info do padrão ganho
-                                MascaraPadrao = bp.Padrao.Mascara
-                            });
+                            novosGanhadores.Add(CreateGanhadorInfo(cartela, "Dinâmico: " + bp.Padrao.Nome, bp.Padrao.Mascara));
                             
-                            // Marcar padrão como sorteado
                             bp.FoiSorteado = true;
-                            
-                            // Check if it's a RodadaPadrao (mapped manually) or BingoPadrao
-                            // Since we mapped manually in IniciarRodada, the entity state tracking might be lost or confused.
-                            // We need to update the correct table.
                             
                             if (bp.BingoId == 0) // It's a RodadaPadrao mapped
                             {
@@ -534,65 +707,118 @@ namespace BingoAdmin.UI.Services
                         }
                     }
                 }
+                // --- Prizes Logic ---
+                else if (hasPrizes)
+                {
+                    foreach (var prize in targetPrizes)
+                    {
+                         // In Standard Mode, if card already won, skip. In Accumulated, allow win if different prize (implicit by targetPrizes check if strictly handled, but safer to allow loop)
+                         if (_rodadaAtual!.Bingo?.ModoJogo == 0 && alreadyWonInRound) continue;
+                         
+                         string mask = prize.Padrao?.Mascara ?? new string('1', 25);
+                         if (VerificarMascara(cartela.Numeros, mask))
+                         {
+                              var prizeName = $"{prize.Ordem}º Prêmio - {prize.Descricao}";
+                              var info = CreateGanhadorInfo(cartela, prizeName, mask);
+                              info.PremioId = prize.Id;
+                              info.NomePremio = prize.Descricao;
+                              info.ValorPremio = prize.Valor;
+                              novosGanhadores.Add(info);
+                         }
+                    }
+                }
+                // --- Legacy Logic ---
                 else
                 {
-                    // Modo clássico
-                    if (VerificarMascara(cartela.Numeros, _mascaraAtual))
+                    // Modo clássico standard
+                    if (!alreadyWonInRound && VerificarMascara(cartela.Numeros, _mascaraAtual))
                     {
-                        novosGanhadores.Add(new GanhadorInfo 
-                        { 
-                            CartelaId = cartela.Id, 
-                            ComboNumero = cartela.ComboNumero,
-                            NumeroCartela = cartela.NumeroCartela,
-                            NomeDono = cartela.Dono 
-                        });
+                        novosGanhadores.Add(CreateGanhadorInfo(cartela, "Bingo!", _mascaraAtual));
                     }
                 }
             }
 
-            if (padroesSorteadosNestaVerificacao.Any() && ModoUnicoAtivo)
+            if (padroesSorteadosNestaVerificacao.Any())
             {
-                _context.SaveChanges();
-                // Remover da lista em memória
-                _padroesDinamicosAtivos.RemoveAll(x => padroesSorteadosNestaVerificacao.Contains(x.Id));
-            }
-            else if (padroesSorteadosNestaVerificacao.Any())
-            {
-                // Se não for modo único, apenas salva o estado no banco (que foi sorteado), mas NÃO remove da lista ativa
-                _context.SaveChanges();
+               _context.SaveChanges();
+               if (ModoUnicoAtivo) _padroesDinamicosAtivos.RemoveAll(x => padroesSorteadosNestaVerificacao.Contains(x.Id));
             }
 
             if (novosGanhadores.Any())
             {
-                ProcessarNovosGanhadores(novosGanhadores);
+                // If we have winners for multiple prizes, process strictly per prize
+                var groups = novosGanhadores.GroupBy(g => g.PremioId);
+                foreach(var group in groups)
+                {
+                    ProcessarNovosGanhadores(group.ToList());
+                }
             }
+        }
+
+        private GanhadorInfo CreateGanhadorInfo(CachedCartela cartela, string nomePadrao, string mascara)
+        {
+             return new GanhadorInfo 
+             { 
+                CartelaId = cartela.Id, 
+                ComboNumero = cartela.ComboNumero,
+                NumeroCartela = cartela.NumeroCartela,
+                NomeDono = cartela.Dono,
+                NomeKit = cartela.NomeKit,
+                CodigoValidacao = cartela.CodigoValidacao,
+                NomePadrao = nomePadrao,
+                MascaraPadrao = mascara
+             };
         }
 
         private void ProcessarNovosGanhadores(List<GanhadorInfo> novosGanhadores)
         {
-            if (novosGanhadores.Count > 1)
+            // Determine Tie-Breaker Logic
+            // If Eliminate mode (1) OR (Legacy mode and MaxWinners=1)
+            bool eliminateMode = _rodadaAtual?.ModoDisputaPremios == 1 || (_rodadaAtual?.MaximoGanhadores == 1 && (_rodadaAtual?.Premios == null || !_rodadaAtual.Premios.Any()));
+            
+            // Check count
+            if (eliminateMode && novosGanhadores.Count > 1)
             {
-                // Pedra Maior (Empate)
-                _feedService.AddMessage("Bingo! - Pedra Maior", "Ganhadores:", "PedraMaior");
-                _speechService.Speak($"Temos um empate! {novosGanhadores.Count} ganhadores encontrados. Vamos para a Pedra Maior.");
-                foreach(var g in novosGanhadores) 
+                // Configurar Pedra Maior
+                var partsOrdenados = novosGanhadores
+                    .OrderBy(g => g.NomeDono)
+                    .Select(g => new ViewModels.PedraMaiorItemViewModel
+                    {
+                         Nome = g.NomeDono,
+                         ComboNumero = g.ComboNumero.ToString(),
+                         NumeroCartela = g.NumeroCartela.ToString(),
+                         NomeKit = g.NomeKit,
+                         OriginalInfo = g,
+                         PedraSorteada = 0,
+                         IsWinner = false
+                    })
+                    .ToList();
+                
+                _gameStatusService.PedraMaiorParticipants.Clear();
+                foreach(var part in partsOrdenados)
                 {
-                    _ganhadoresIds.Add(g.CartelaId);
-                    _feedService.AddMessage("Ganhador", $"{g.NomeDono}, Combo {g.ComboNumero}, Cartela {g.NumeroCartela}", "PedraMaior");
+                    _gameStatusService.PedraMaiorParticipants.Add(part);
                 }
+
+                _gameStatusService.IsPedraMaiorActive = true;
+                
+                // Notifica UI sobre empates para pausar o jogo e Tocar o audio apropriado
+                OnGanhadoresEncontrados?.Invoke(novosGanhadores);
+                
+                return; 
             }
-            else
+            
+            // Caso Vencedor(es) Válido(s) (não Pedra Maior ou Distribuído)
+            foreach(var g in novosGanhadores) 
             {
-                foreach(var g in novosGanhadores) 
-                {
-                    _ganhadoresIds.Add(g.CartelaId);
-                    _feedService.AddMessage("BINGO!", $"Ganhador: {g.NomeDono}, Combo {g.ComboNumero}, Cartela {g.NumeroCartela}", "Success");
-                    _speechService.SpeakWinner(g.NomeDono);
-                }
+                _ganhadoresIds.Add(g.CartelaId);
+                string prizeTxt = string.IsNullOrEmpty(g.NomePremio) ? "" : $" ({g.NomePremio})";
+                _feedService.AddMessage("BINGO!", $"Ganhador: {g.NomeDono}, Combo {g.ComboNumero}, Cartela {g.NumeroCartela}{prizeTxt}", "Success");
             }
 
             OnGanhadoresEncontrados?.Invoke(novosGanhadores);
             SalvarGanhadores(novosGanhadores);
+            UpdateCurrentPrizeInfo();
         }
 
         private bool VerificarCartela(int[] numerosCartela)
@@ -642,15 +868,24 @@ namespace BingoAdmin.UI.Services
             bool novosGanhadores = false;
             foreach (var g in ganhadoresInfos)
             {
-                // Verifica se já não foi salvo
-                bool jaSalvo = _context.Ganhadores.Any(x => x.RodadaId == _rodadaAtual.Id && x.CartelaId == g.CartelaId);
+                bool jaSalvo;
+                if (g.PremioId.HasValue)
+                {
+                     jaSalvo = _context.Ganhadores.Any(x => x.RodadaId == _rodadaAtual.Id && x.CartelaId == g.CartelaId && x.PremioId == g.PremioId);
+                }
+                else
+                {
+                     jaSalvo = _context.Ganhadores.Any(x => x.RodadaId == _rodadaAtual.Id && x.CartelaId == g.CartelaId && x.PremioId == null);
+                }
+
                 if (!jaSalvo)
                 {
                     _context.Ganhadores.Add(new Ganhador
                     {
                         RodadaId = _rodadaAtual.Id,
                         CartelaId = g.CartelaId,
-                        IsVencedorFinal = false
+                        IsVencedorFinal = false,
+                        PremioId = g.PremioId
                     });
                     novosGanhadores = true;
                 }
@@ -666,7 +901,7 @@ namespace BingoAdmin.UI.Services
         {
             if (_rodadaAtual == null) return;
             var stats = CalcularStatsPorUmaBola();
-            OnPorUmaBolaAtualizado?.Invoke(stats);
+            OnPorUmaBolaCountChanged?.Invoke(stats);
         }
 
         public PorUmaBolaStats CalcularStatsPorUmaBola()
@@ -774,6 +1009,7 @@ namespace BingoAdmin.UI.Services
         {
             if (_rodadaAtual == null) return;
 
+            _lastAnnouncedPrize = string.Empty;
             _numerosSorteados.Clear();
             _ganhadoresIds.Clear();
 
@@ -850,7 +1086,8 @@ namespace BingoAdmin.UI.Services
                         CartelaId = cartela.Id,
                         ComboNumero = cartela.ComboNumero,
                         NumeroCartela = cartela.NumeroCartela,
-                        NomeDono = cartela.Dono
+                        NomeDono = cartela.Dono,
+                        NomeKit = cartela.NomeKit // Copiar
                     });
                 }
             }
@@ -889,6 +1126,101 @@ namespace BingoAdmin.UI.Services
                 VerificarGanhadores();
             }
         }
+
+        private void UpdateCurrentPrizeInfo()
+        {
+            if (_rodadaAtual == null) return;
+
+            string desc = "";
+            string val = "";
+            string pat = "";
+
+            if (_rodadaAtual.Premios != null && _rodadaAtual.Premios.Any())
+            {
+                var wonPrizeIds = _context.Ganhadores
+                     .Where(g => g.RodadaId == _rodadaAtual.Id && g.PremioId.HasValue)
+                     .Select(g => g.PremioId!.Value)
+                     .ToHashSet();
+
+                var availablePrizes = _rodadaAtual.Premios
+                    .Where(p => !wonPrizeIds.Contains(p.Id))
+                    .OrderBy(p => p.Ordem)
+                    .ToList();
+
+                int modoJogo = _rodadaAtual.Bingo?.ModoJogo ?? 0;
+
+                if (modoJogo == 1) // Accumulated
+                {
+                    if (availablePrizes.Any())
+                    {
+                        desc = "ACUMULADO";
+                        if (availablePrizes.Count == 1)
+                        {
+                            var p = availablePrizes.First();
+                            desc = p.Descricao;
+                            val = p.Valor.HasValue ? p.Valor.Value.ToString("C2") : "";
+                            pat = p.Padrao?.Nome ?? "";
+                        }
+                        else
+                        {
+                            desc = $"ACUMULADO ({availablePrizes.Count} Prêmios)";
+                            val = string.Join(" | ", availablePrizes.Select(p => p.Descricao));
+                            pat = "Múltiplos Padrões";
+                        }
+                    }
+                    else
+                    {
+                        desc = "Rodada Finalizada";
+                        val = "";
+                        pat = "Todos prêmios sorteados";
+                    }
+                }
+                else // Standard/Sequential (0)
+                {
+                    var nextPrize = availablePrizes.FirstOrDefault();
+                    if (nextPrize != null)
+                    {
+                        desc = nextPrize.Descricao;
+                        val = nextPrize.Valor.HasValue ? nextPrize.Valor.Value.ToString("C2") : "";
+                        pat = nextPrize.Padrao?.Nome ?? "Padrão Definido";
+                    }
+                    else
+                    {
+                        desc = "Rodada Finalizada";
+                        val = "Todos prêmios sorteados";
+                        pat = "";
+                    }
+                }
+            }
+            else
+            {
+                desc = _rodadaAtual.Descricao;
+                if (string.IsNullOrEmpty(desc)) desc = "Rodada " + _rodadaAtual.NumeroOrdem;
+
+                if (_rodadaAtual.Padrao != null)
+                {
+                    pat = _rodadaAtual.Padrao.Nome;
+                    val = "Sem Prêmios Definidos";
+                }
+                else
+                {
+                    pat = "Cartela Cheia (Padrão)";
+                    val = "";
+                }
+            }
+
+            _gameStatusService.CurrentPrizeDescription = desc;
+            _gameStatusService.CurrentPrizeValue = val;
+            _gameStatusService.CurrentPrizePatternName = pat;
+
+            // Anunciar prêmio se mudou
+            if (desc != _lastAnnouncedPrize && !string.IsNullOrEmpty(desc) && desc != "Rodada Finalizada" && !desc.StartsWith("ACUMULADO"))
+            {
+                 _speechService.AnnouncePrize(desc);
+                 _lastAnnouncedPrize = desc;
+            }
+        }
+
     }
 
     public class CachedCartela
@@ -897,6 +1229,8 @@ namespace BingoAdmin.UI.Services
         public int ComboNumero { get; set; }
         public int NumeroCartela { get; set; }
         public string Dono { get; set; } = string.Empty;
+        public string NomeKit { get; set; } = string.Empty; // New Field
+        public string CodigoValidacao { get; set; } = string.Empty; // Serial/Hash
         public int[] Numeros { get; set; } = Array.Empty<int>();
     }
 
@@ -906,8 +1240,16 @@ namespace BingoAdmin.UI.Services
         public int ComboNumero { get; set; }
         public int NumeroCartela { get; set; }
         public string NomeDono { get; set; } = string.Empty;
+        public string NomeKit { get; set; } = string.Empty; // New Field
+        public string CodigoValidacao { get; set; } = string.Empty; // Added Serial Number
         public string NomePadrao { get; set; } = string.Empty; // Adicionado para armazenar o nome do padrão dinâmico, se aplicável
-        public string MascaraPadrao { get; set; } // Adicionado para armazenar a máscara do padrão vencedor
+        public string MascaraPadrao { get; set; } = string.Empty; // Adicionado para armazenar a máscara do padrão vencedor
+        public int? PremioId { get; set; }
+        public string NomePremio { get; set; } = string.Empty;
+        public decimal? ValorPremio { get; set; }
+        
+        // Helper para UI
+        public string NumeroCartelaFormatado => $"{NumeroCartela}"; 
     }
 
     public class PorUmaBolaStats

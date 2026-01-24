@@ -6,12 +6,15 @@ using BingoAdmin.Infra.Data;
 using Microsoft.EntityFrameworkCore;
 using BingoAdmin.Domain.Entities;
 using Microsoft.Extensions.DependencyInjection;
+using BingoAdmin.UI.Services;
 
 namespace BingoAdmin.UI.Views
 {
     public partial class UsuariosView : UserControl
     {
         private BingoContext? _context;
+        private UserSession? _userSession;
+        private BingoContextService? _bingoContextService;
 
         public UsuariosView()
         {
@@ -28,13 +31,13 @@ namespace BingoAdmin.UI.Views
 
         private void UsuariosView_Loaded(object sender, RoutedEventArgs e)
         {
-            if (_context == null)
+            if (_context == null || _userSession == null)
             {
                 if (Application.Current is App app && app.Host != null)
                 {
-                    // Create a scope to get the context if possible, or just get transient.
-                    // For simplicity in this UI view, we get a transient instance to keep alive while the view is active.
                     _context = app.Host.Services.GetService<BingoContext>();
+                    _userSession = app.Host.Services.GetService<UserSession>();
+                    _bingoContextService = app.Host.Services.GetService<BingoContextService>();
                 }
             }
             
@@ -70,6 +73,32 @@ namespace BingoAdmin.UI.Views
             if (e.Key == System.Windows.Input.Key.Enter)
             {
                 LoadUsuarios(SearchBox.Text);
+            }
+        }
+
+        private void Impersonate_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button btn && btn.Tag is int userId)
+            {
+                if (_context != null && _userSession != null)
+                {
+                    var targetUser = _context.Usuarios.Find(userId);
+                    if (targetUser != null)
+                    {
+                        if (MessageBox.Show($"Deseja acessar o painel como '{targetUser.Nome}'?\n\nVocê verá exatamente o que este usuário vê.", "Acesso Administrativo", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+                        {
+                            _userSession.ImpersonateUser(targetUser);
+                            
+                            // Notify system updates
+                            _bingoContextService?.NotifyBingoListUpdated();
+                            
+                            MessageBox.Show($"Você agora está acessando como {targetUser.Nome}.\nUtilize a barra superior para sair deste modo.", "Modo Espião Ativado", MessageBoxButton.OK, MessageBoxImage.Information);
+                            
+                            // Try to switch tab via VisualTree lookup or service?
+                            // easier: just refresh the UI state will happen automatically due to events in other views.
+                        }
+                    }
+                }
             }
         }
 

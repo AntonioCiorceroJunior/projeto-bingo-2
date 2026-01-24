@@ -142,9 +142,66 @@ namespace BingoAdmin.UI.Views
             }
         }
 
+        private void UpdateCombosVisibility()
+        {
+            if (PnlKitsPorCombo == null || LblQtdCombos == null) return;
+
+            if (ChkUsarCombos.IsChecked == true)
+            {
+                PnlKitsPorCombo.Visibility = Visibility.Visible;
+                LblQtdCombos.Text = "Quantidade de Combos";
+            }
+            else
+            {
+                PnlKitsPorCombo.Visibility = Visibility.Collapsed;
+                LblQtdCombos.Text = "Quantidade de Kits";
+            }
+        }
+
+        private void ChkUsarCombos_CheckedChanged(object sender, RoutedEventArgs e)
+        {
+            UpdateCombosVisibility();
+        }
+
+        private void TglModoJogo_Click(object sender, RoutedEventArgs e)
+        {
+             // Safety check for initialization
+            if (TglModoJogo == null || ChkRodadasPersonalizado == null || TxtQtdRodadasManual == null || CmbQtdRodadas == null) return;
+
+            bool isAcumulado = TglModoJogo.IsChecked == true;
+
+            if (isAcumulado)
+            {
+                TglModoJogo.Content = "Prêmios Acumulados";
+                // Force 1 round
+                ChkRodadasPersonalizado.IsChecked = true; 
+                TxtQtdRodadasManual.Text = "1";
+                
+                // Disable controls
+                TxtQtdRodadasManual.IsEnabled = false;
+                CmbQtdRodadas.IsEnabled = false;
+                ChkRodadasPersonalizado.IsEnabled = false;
+                
+                if (RodadasConfig.Any())
+                {
+                    RodadasConfig[0].Descricao = "Rodada Única - Acumulado";
+                    RodadasConfig[0].MaximoGanhadores = 0; // Config default logic needed elsewhere, but user wants max winners limit
+                    RodadasConfig[0].ModoDinamico = true; // Acumulado usually implies dynamic patterns
+                }
+            }
+            else
+            {
+                TglModoJogo.Content = "Bingo por Rodadas (Clássico)";
+                // Restore
+                if (TxtQtdRodadasManual != null) TxtQtdRodadasManual.IsEnabled = true;
+                if (CmbQtdRodadas != null) CmbQtdRodadas.IsEnabled = true;
+                if (ChkRodadasPersonalizado != null) ChkRodadasPersonalizado.IsEnabled = true;
+            }
+        }
+
         private async void GerarCombos_Click(object sender, RoutedEventArgs e)
         {
-            if (!ValidarCampos(out int qtdCombos, out int cartelasPorCombo)) return;
+            if (!ValidarCampos(out int qtdCombos, out int kitsPorCombo, out int cartelasPorKit)) return;
 
             try
             {
@@ -156,8 +213,9 @@ namespace BingoAdmin.UI.Views
                     StatusText.Text = status;
                 });
 
-                bool modoDinamicoGlobal = false; // Global mode removed
+                bool modoDinamicoGlobal = false;
                 List<int> padroesIds = new List<int>();
+                int modoJogo = (TglModoJogo.IsChecked == true) ? 1 : 0;
 
                 // Convert ViewModel to DTO
                 var rodadasDto = RodadasConfig.Select(r => new RodadaConfigDto
@@ -168,17 +226,28 @@ namespace BingoAdmin.UI.Views
                     ModoDinamico = r.ModoDinamico,
                     PadroesIds = r.PadroesIds,
                     MaximoGanhadores = r.MaximoGanhadores,
-                    TipoJogo = r.TipoJogo
+                    TipoJogo = r.TipoJogo,
+                    ModoDisputaPremios = r.ModoDisputaPremios,
+                    Premios = r.Premios.Select(p => new PremioDto 
+                    { 
+                        Descricao = p.Descricao, 
+                        Ordem = p.Ordem, 
+                        Valor = p.Valor,
+                        PadraoId = p.PadraoId
+                    }).ToList()
                 }).ToList();
 
                 int newBingoId = await _bingoManagementService.CriarBingoAsync(
                     NomeBingoBox.Text, 
                     DataBingoPicker.SelectedDate.Value, 
                     qtdCombos, 
-                    cartelasPorCombo,
+                    kitsPorCombo,
+                    cartelasPorKit,
+                    ChkUsarCombos.IsChecked ?? false,
                     rodadasDto,
                     modoDinamicoGlobal,
                     padroesIds,
+                    modoJogo,
                     progress
                 );
 
@@ -203,6 +272,7 @@ namespace BingoAdmin.UI.Views
             if (_bingoEmEdicaoId == null) return;
             
             int qtdRodadas = RodadasConfig.Count;
+            int modoJogo = (TglModoJogo.IsChecked == true) ? 1 : 0;
 
             try
             {
@@ -214,7 +284,15 @@ namespace BingoAdmin.UI.Views
                     ModoDinamico = r.ModoDinamico,
                     PadroesIds = r.PadroesIds,
                     MaximoGanhadores = r.MaximoGanhadores,
-                    TipoJogo = r.TipoJogo
+                    TipoJogo = r.TipoJogo,
+                    ModoDisputaPremios = r.ModoDisputaPremios,
+                    Premios = r.Premios.Select(p => new PremioDto 
+                    { 
+                        Descricao = p.Descricao, 
+                        Ordem = p.Ordem, 
+                        Valor = p.Valor,
+                        PadraoId = p.PadraoId
+                    }).ToList()
                 }).ToList();
 
                 await _bingoManagementService.AtualizarBingoAsync(
@@ -222,7 +300,8 @@ namespace BingoAdmin.UI.Views
                     NomeBingoBox.Text,
                     DataBingoPicker.SelectedDate.Value,
                     qtdRodadas,
-                    rodadasDto
+                    rodadasDto,
+                    modoJogo
                 );
 
                 MessageBox.Show("Bingo atualizado com sucesso!");
@@ -231,7 +310,8 @@ namespace BingoAdmin.UI.Views
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Erro ao atualizar bingo: {ex.Message}");
+                 var inner = ex.InnerException?.Message ?? "N/A";
+                MessageBox.Show($"Erro ao atualizar bingo: {ex.Message}\nDetalhes: {inner}");
             }
         }
 
@@ -247,8 +327,15 @@ namespace BingoAdmin.UI.Views
                 _bingoEmEdicaoId = bingo.Id;
                 NomeBingoBox.Text = bingo.Nome;
                 DataBingoPicker.SelectedDate = bingo.DataInicioPrevista;
+                TglModoJogo.IsChecked = (bingo.ModoJogo == 1);
+                TglModoJogo_Click(TglModoJogo, null);
+                
+                ChkUsarCombos.IsChecked = bingo.TemCombos;
+                UpdateCombosVisibility();
+
                 QtdCombosBox.Text = bingo.QuantidadeCombos.ToString();
-                CartelasPorComboBox.Text = bingo.CartelasPorCombo.ToString();
+                KitsPorComboBox.Text = bingo.KitsPorCombo.ToString();
+                CartelasPorKitBox.Text = bingo.CartelasPorKit.ToString();
                 
                 // Set rounds
                 CmbQtdRodadas.SelectedItem = bingo.QuantidadeRodadas;
@@ -267,7 +354,7 @@ namespace BingoAdmin.UI.Views
                 RodadasConfig.Clear();
                 foreach (var rodada in bingo.Rodadas.OrderBy(r => r.NumeroOrdem))
                 {
-                    RodadasConfig.Add(new RodadaConfigViewModel
+                    var vm = new RodadaConfigViewModel
                     {
                         Numero = rodada.NumeroOrdem,
                         Descricao = rodada.Descricao,
@@ -275,13 +362,31 @@ namespace BingoAdmin.UI.Views
                         ModoDinamico = rodada.ModoPadroesDinamicos,
                         MaximoGanhadores = rodada.MaximoGanhadores,
                         TipoJogo = rodada.TipoJogo,
-                        PadroesIds = rodada.RodadaPadroes.Select(rp => rp.PadraoId).ToList()
-                    });
+                        PadroesIds = rodada.RodadaPadroes.Select(rp => rp.PadraoId).ToList(),
+                        ModoDisputaPremios = rodada.ModoDisputaPremios
+                    };
+
+                    if (rodada.Premios != null)
+                    {
+                        foreach (var p in rodada.Premios.OrderBy(x => x.Ordem))
+                        {
+                            vm.Premios.Add(new PremioViewModel
+                            {
+                                Descricao = p.Descricao,
+                                Ordem = p.Ordem,
+                                Valor = p.Valor,
+                                PadraoId = p.PadraoId
+                            });
+                        }
+                    }
+
+                    RodadasConfig.Add(vm);
                 }
 
                 // Bloquear campos que não podem ser editados facilmente após criação (por enquanto)
                 QtdCombosBox.IsEnabled = false;
-                CartelasPorComboBox.IsEnabled = false;
+                KitsPorComboBox.IsEnabled = false;
+                CartelasPorKitBox.IsEnabled = false;
 
                 BtnGerar.Visibility = Visibility.Collapsed;
                 BtnAtualizar.Visibility = Visibility.Visible;
@@ -308,24 +413,49 @@ namespace BingoAdmin.UI.Views
             }
         }
 
-        private bool ValidarCampos(out int qtdCombos, out int cartelasPorCombo)
+        private bool ValidarCampos(out int qtdCombos, out int kitsPorCombo, out int cartelasPorKit)
         {
             qtdCombos = 0;
-            cartelasPorCombo = 0;
+            kitsPorCombo = 0;
+            cartelasPorKit = 0;
 
             if (string.IsNullOrWhiteSpace(NomeBingoBox.Text) || 
                 string.IsNullOrWhiteSpace(QtdCombosBox.Text) || 
-                string.IsNullOrWhiteSpace(CartelasPorComboBox.Text))
+                string.IsNullOrWhiteSpace(CartelasPorKitBox.Text))
             {
-                MessageBox.Show("Preencha todos os campos.");
+                MessageBox.Show("Preencha todos os campos obrigatórios.");
                 return false;
             }
 
-            if (!int.TryParse(QtdCombosBox.Text, out qtdCombos) || 
-                !int.TryParse(CartelasPorComboBox.Text, out cartelasPorCombo))
+            if (ChkUsarCombos.IsChecked == true && string.IsNullOrWhiteSpace(KitsPorComboBox.Text))
             {
-                MessageBox.Show("Quantidade de combos e cartelas devem ser números.");
+                MessageBox.Show("Informe a quantidade de kits por combo.");
                 return false;
+            }
+
+            if (!int.TryParse(QtdCombosBox.Text, out qtdCombos) || qtdCombos <= 0)
+            {
+                MessageBox.Show("Quantidade principal deve ser um número positivo.", "Validação", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return false;
+            }
+
+            if (!int.TryParse(CartelasPorKitBox.Text, out cartelasPorKit) || cartelasPorKit <= 0)
+            {
+                 MessageBox.Show("Cartelas por Kit deve ser um número positivo.", "Validação", MessageBoxButton.OK, MessageBoxImage.Warning);
+                 return false;
+            }
+
+            if (ChkUsarCombos.IsChecked == true)
+            {
+                if (!int.TryParse(KitsPorComboBox.Text, out kitsPorCombo) || kitsPorCombo <= 0)
+                {
+                    MessageBox.Show("Kits por Combo deve ser um número positivo.", "Validação", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return false;
+                }
+            }
+            else
+            {
+                kitsPorCombo = 1;
             }
 
             if (RodadasConfig.Count == 0)
@@ -347,16 +477,25 @@ namespace BingoAdmin.UI.Views
         {
             _bingoEmEdicaoId = null;
             NomeBingoBox.Text = "";
+            TglModoJogo.IsChecked = false;
+            TglModoJogo_Click(TglModoJogo, null);
+            
             QtdCombosBox.Text = "";
-            CartelasPorComboBox.Text = "";
+            KitsPorComboBox.Text = "";
+            CartelasPorKitBox.Text = "";
             DataBingoPicker.SelectedDate = null;
             
             // Reset rounds to default
             ChkRodadasPersonalizado.IsChecked = false;
             CmbQtdRodadas.SelectedIndex = 9; // 10 rounds
+            
+            // Reset config combos
+            ChkUsarCombos.IsChecked = true;
+            UpdateCombosVisibility();
 
             QtdCombosBox.IsEnabled = true;
-            CartelasPorComboBox.IsEnabled = true;
+            KitsPorComboBox.IsEnabled = true;
+            CartelasPorKitBox.IsEnabled = true;
 
             BtnGerar.Visibility = Visibility.Visible;
             BtnAtualizar.Visibility = Visibility.Collapsed;
@@ -383,6 +522,30 @@ namespace BingoAdmin.UI.Views
             catch (Exception ex)
             {
                 MessageBox.Show($"Erro ao abrir configuração de padrões: {ex.Message}");
+            }
+        }
+
+        private void ConfigurarPremiosRodada_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (sender is Button btn && btn.DataContext is RodadaConfigViewModel vm)
+                {
+                    var padroes = _padraoService.ListarTodos();
+                    var window = new PremiosConfigWindow(vm, padroes);
+                    window.Owner = Application.Current.MainWindow;
+                    if (window.ShowDialog() == true)
+                    {
+                        if (vm.Premios.Any())
+                        {
+                            vm.TipoPremio = string.Join(", ", vm.Premios.OrderBy(p => p.Ordem).Select(p => p.Descricao));
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Erro ao abrir configuração de prêmios: {ex.Message}");
             }
         }
     }

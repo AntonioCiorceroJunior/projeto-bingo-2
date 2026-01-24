@@ -55,12 +55,13 @@
                 </Style>
             </DataGrid.Resources>
             <DataGrid.Columns>
-                <DataGridTextColumn Header="Nome" Binding="{Binding Nome}" Width="*"/>
+                <DataGridTextColumn Header="Nome" Binding="{Binding Nome}" Width="250"/>
                 <DataGridTextColumn Header="Combo" Binding="{Binding ComboNumero}" Width="80"/>
+                <DataGridTextColumn Header="Kit" Binding="{Binding NomeKit}" Width="150"/>
                 <DataGridTextColumn Header="Cartela" Binding="{Binding NumeroCartela}" Width="80"/>
-                <DataGridTextColumn Header="Padrão" Binding="{Binding NomePadrao}" Width="100"/>
+                <DataGridTextColumn Header="Padrão" Binding="{Binding NomePadrao}" Width="150"/>
                 <DataGridTextColumn Header="Pedra" Binding="{Binding PedraSorteada}" Width="80"/>
-                <DataGridTemplateColumn Width="120">
+                <DataGridTemplateColumn Width="*">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
                             <TextBlock Text="&lt;- GANHADORA" Visibility="{Binding IsWinner, Converter={StaticResource BooleanToVisibilityConverter}}"/>

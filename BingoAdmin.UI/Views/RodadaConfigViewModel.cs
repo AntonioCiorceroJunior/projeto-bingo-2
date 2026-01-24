@@ -13,6 +13,8 @@ namespace BingoAdmin.UI.Views
         private List<int> _padroesIds = new();
         private int? _maximoGanhadores;
         private string _tipoJogo = "Padrao";
+        private int _modoDisputaPremios = 0;
+        private System.Collections.ObjectModel.ObservableCollection<PremioViewModel> _premios = new();
 
         public int Numero
         {
@@ -48,6 +50,18 @@ namespace BingoAdmin.UI.Views
         {
             get => _tipoJogo;
             set { _tipoJogo = value; OnPropertyChanged(); }
+        }
+
+        public int ModoDisputaPremios
+        {
+            get => _modoDisputaPremios;
+            set { _modoDisputaPremios = value; OnPropertyChanged(); }
+        }
+
+        public System.Collections.ObjectModel.ObservableCollection<PremioViewModel> Premios
+        {
+            get => _premios;
+            set { _premios = value; OnPropertyChanged(); }
         }
 
         public List<int> PadroesIds

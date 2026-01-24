@@ -10,6 +10,7 @@ namespace BingoAdmin.Infra.Data
         public DbSet<Rodada> Rodadas { get; set; }
         public DbSet<Padrao> Padroes { get; set; }
         public DbSet<Combo> Combos { get; set; }
+        public DbSet<Kit> Kits { get; set; }
         public DbSet<Cartela> Cartelas { get; set; }
         public DbSet<Sorteio> Sorteios { get; set; }
         public DbSet<Ganhador> Ganhadores { get; set; }
@@ -18,6 +19,8 @@ namespace BingoAdmin.Infra.Data
         public DbSet<Despesa> Despesas { get; set; }
         public DbSet<BingoPadrao> BingoPadroes { get; set; }
         public DbSet<RodadaPadrao> RodadaPadroes { get; set; }
+        public DbSet<BingoFrase> BingoFrases { get; set; }
+        public DbSet<Premio> Premios { get; set; }
 
         public BingoContext() { }
 

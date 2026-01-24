@@ -37,6 +37,7 @@ namespace BingoAdmin.UI.Views
                     ComboNumero = g.ComboNumero.ToString(),
                     NumeroCartela = g.NumeroCartela.ToString(),
                     NomePadrao = g.NomePadrao,
+                    NomeKit = g.NomeKit,
                     OriginalInfo = g
                 });
             }

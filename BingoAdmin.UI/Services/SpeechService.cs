@@ -38,73 +38,111 @@ namespace BingoAdmin.UI.Services
 
         public SpeechService()
         {
-            _synthesizer = new SpeechSynthesizer();
-            ConfigureVoice();
-            _synthesizer.Volume = 100;
-            _synthesizer.Rate = 4;
+            try 
+            {
+                _synthesizer = new SpeechSynthesizer();
+                ConfigureVoice();
+                _synthesizer.Volume = 100;
+                _synthesizer.Rate = 4;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Erro ao inicializar TTS: {ex.Message}");
+                _isEnabled = false;
+                _synthesizer = null; // Mark as null so we verify before using
+            }
             
-            _tempAudioPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "TempAudio");
-            Directory.CreateDirectory(_tempAudioPath);
+            try
+            {
+                _tempAudioPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "TempAudio");
+                Directory.CreateDirectory(_tempAudioPath);
+            }
+            catch (Exception ex)
+            {
+                 System.Diagnostics.Debug.WriteLine($"Erro ao criar diretório temporário: {ex.Message}");
+                 _isEnabled = false; // Disable if no IO access
+            }
         }
 
         private void ConfigureVoice()
         {
-            // Try to find a Portuguese voice
-            var voices = _synthesizer.GetInstalledVoices();
-            var portugueseVoice = voices.FirstOrDefault(v => v.VoiceInfo.Culture.Name.StartsWith("pt"));
-
-            if (portugueseVoice != null)
+            if (_synthesizer == null) return;
+            try 
             {
-                _synthesizer.SelectVoice(portugueseVoice.VoiceInfo.Name);
+                // Try to find a Portuguese voice
+                var voices = _synthesizer.GetInstalledVoices();
+                var portugueseVoice = voices.FirstOrDefault(v => v.VoiceInfo.Culture.Name.StartsWith("pt"));
+
+                if (portugueseVoice != null)
+                {
+                    _synthesizer.SelectVoice(portugueseVoice.VoiceInfo.Name);
+                }
             }
+            catch { /* Ignore voice selection errors */ }
         }
 
         public void Speak(string text)
         {
-            if (!IsEnabled || string.IsNullOrWhiteSpace(text)) return;
-            StopAllAudio();
-            PlayGoogleTts(text);
+            // Fire and forget wrapper
+            _ = SpeakAsync(text);
         }
 
         public void SpeakBall(string letter, int number)
         {
-            if (!IsEnabled) return;
-            
-            // Close any previous instance to ensure we can open the new one
-            mciSendString("close bingoAudio", null, 0, IntPtr.Zero);
+             // Google TTS reads "N." as "Número". We substitute it for phonetic spelling.
+             string spokenLetter = letter;
+             string separator = ". "; // Default pause
 
-            // Try to play audio file first (e.g., "Audios/B5.mp3")
-            string baseDir = AppDomain.CurrentDomain.BaseDirectory;
-            string audioPath = Path.Combine(baseDir, "Audios", $"{letter}{number}.mp3");
-            
-            if (File.Exists(audioPath))
-            {
-                PlayFile(audioPath);
-                return;
-            }
-            
-            // Speak Letter and Number (e.g., "B 5")
-            string textToSpeak = $"{letter} {number}";
-            if (letter.Equals("O", StringComparison.OrdinalIgnoreCase))
-            {
-                textToSpeak = $"Ó {number}";
-            }
-            PlayGoogleTts(textToSpeak);
+             if (letter.Equals("N", StringComparison.OrdinalIgnoreCase))
+             {
+                 spokenLetter = "Eni";
+                 separator = " "; // Remove pause for N
+             }
+             
+             string text = $"{spokenLetter}{separator}{number}.";
+             _ = SpeakAsync(text);
         }
 
-        public void SpeakWinner(string winnerName)
+        public async Task SpeakAsync(string text)
+        {
+            if (!IsEnabled || string.IsNullOrWhiteSpace(text)) return;
+            StopAllAudio();
+            
+            // We need to wait for this to finish if possible, but PlayGoogleTts is fire-and-forget regarding 'playback' duration in current implementation.
+            // However, we can use Synthesizer for blocking speech or try to calculate duration.
+            // The best way for "pausing game" is if we can await the completion.
+            // Getting duration from MP3 or TTS is tricky without external libs.
+            // For now, let's use the Synthesizer which has events, OR just accept that we fire it.
+            // But the user requested PAUSE. So we must know when it ends.
+            // Windows TTS (_synthesizer) is easier to await using TaskCompletionSource.
+            
+            // Preference: High Quality Google TTS -> Fallback Windows.
+            // If using Google TTS file playback via MCI, we can poll status.
+            
+            await PlayGoogleTts(text);
+        }
+
+        public void AnnouncePrize(string prizeName)
+        {
+            if (!IsEnabled || string.IsNullOrWhiteSpace(prizeName)) return;
+            string text = $"Valendo {prizeName}";
+            _ = SpeakAsync(text);
+        }
+
+        public void SpeakWinner(string winnerName, string comboNumero, string cartelaNumero)
         {
             if (!IsEnabled) return;
             StopAllAudio();
-            PlayGoogleTts($"Bingo! Parabéns {winnerName}!");
+            // "Parabens funalo (Nome de quem ganhou), combo tal(numero do combo que ganhou), cartela tal (numero da cartela desse combo)"
+            PlayGoogleTts($"Bingo! Parabéns {winnerName}, Combo {comboNumero}, Cartela {cartelaNumero}!");
         }
 
-        private async void PlayGoogleTts(string text)
+        private async Task PlayGoogleTts(string text)
         {
             try
             {
                 string hash = GetMd5Hash(text);
-                string filename = $"tts_{hash}.mp3";
+                string filename = $"tts_{hash.Substring(0, 10)}.mp3"; // Shorten hash
                 string filePath = Path.Combine(_tempAudioPath, filename);
 
                 if (!File.Exists(filePath))
@@ -114,16 +152,19 @@ namespace BingoAdmin.UI.Services
                     await File.WriteAllBytesAsync(filePath, data);
                 }
 
-                PlayFile(filePath);
+                await PlayFileAsync(filePath);
             }
             catch
             {
-                // Fallback to Windows TTS if Google fails (offline, etc)
-                _synthesizer.SpeakAsync(text);
+                // Fallback to Windows TTS
+                if (_synthesizer != null)
+                {
+                    await Task.Run(() => _synthesizer.Speak(text));
+                }
             }
         }
 
-        private void PlayFile(string path)
+        private async Task PlayFileAsync(string path)
         {
              mciSendString("close bingoAudio", null, 0, IntPtr.Zero);
              string commandOpen = $"open \"{path}\" type mpegvideo alias bingoAudio";
@@ -133,6 +174,18 @@ namespace BingoAdmin.UI.Services
              mciSendString(commandVolume, null, 0, IntPtr.Zero);
 
              mciSendString("play bingoAudio", null, 0, IntPtr.Zero);
+             
+             // Poll for completion
+             await Task.Run(async () => 
+             {
+                 StringBuilder sb = new StringBuilder(128);
+                 while (true)
+                 {
+                     mciSendString("status bingoAudio mode", sb, 128, IntPtr.Zero);
+                     if (sb.ToString() == "stopped") break;
+                     await Task.Delay(100);
+                 }
+             });
         }
 
         private string GetMd5Hash(string input)
@@ -152,7 +205,10 @@ namespace BingoAdmin.UI.Services
 
         private void StopAllAudio()
         {
-            _synthesizer.SpeakAsyncCancelAll();
+            if (_synthesizer != null)
+            {
+                _synthesizer.SpeakAsyncCancelAll();
+            }
             try 
             { 
                 mciSendString("close bingoAudio", null, 0, IntPtr.Zero);
@@ -163,13 +219,19 @@ namespace BingoAdmin.UI.Services
         public void SetVolume(int volume)
         {
             int v = Math.Clamp(volume, 0, 100);
-            _synthesizer.Volume = v;
+            if (_synthesizer != null)
+            {
+                _synthesizer.Volume = v;
+            }
             _mciVolume = v * 10; // Map 0-100 to 0-1000
         }
 
         public void SetRate(int rate)
         {
-            _synthesizer.Rate = Math.Clamp(rate, -10, 10);
+            if (_synthesizer != null)
+            {
+                _synthesizer.Rate = Math.Clamp(rate, -10, 10);
+            }
         }
 
         public void UpdateDrawInterval(double seconds)

@@ -1,1 +1,11 @@
-{"Top":216,"Left":560,"Width":1936,"Height":1048,"WindowState":2,"LastView":"LoginView"}
+{
+  "Top": 1,
+  "Left": 1924,
+  "Width": 2576,
+  "Height": 1408,
+  "WindowState": 2,
+  "LastView": "DashboardView",
+  "RememberMe": true,
+  "SavedEmail": "adminciorcero",
+  "SavedPassword": "ciorcero001"
+}

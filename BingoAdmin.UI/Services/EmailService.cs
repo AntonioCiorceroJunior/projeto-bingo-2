@@ -7,11 +7,11 @@ namespace BingoAdmin.UI.Services
 {
     public class EmailService
     {
-        // In a real scenario, these would be in appsettings.json
+        // Configurações do Gmail
         private const string SmtpServer = "smtp.gmail.com";
         private const int SmtpPort = 587;
-        private const string SenderEmail = "ciorcero07@gmail.com"; // Or a dedicated sender
-        private const string SenderPassword = "your-app-password"; // App Password
+        private const string SenderEmail = "bingodociorcero@gmail.com";
+        private const string SenderPassword = "aoat jbgz agws mkil"; // App Password
 
         public async Task SendFreeTrialRequestAsync(string userName, string userEmail, string userCpf, string userPhone, string reason)
         {
@@ -53,6 +53,45 @@ namespace BingoAdmin.UI.Services
                 await client.SendMailAsync(mailMessage);
             }
             */
+        }
+
+        public async Task SendPasswordResetCodeAsync(string email, string code)
+        {
+            try 
+            {
+                string subject = "Código de Redefinição de Senha - Bingo Admin";
+                string body = $@"
+                    Utilize o código abaixo para redefinir sua senha:
+                    
+                    CÓDIGO: {code}
+                    
+                    Este código expira em 15 minutos.
+                ";
+
+                using (var client = new SmtpClient(SmtpServer, SmtpPort))
+                {
+                    client.EnableSsl = true;
+                    client.Credentials = new NetworkCredential(SenderEmail, SenderPassword);
+                    
+                    var mailMessage = new MailMessage
+                    {
+                        From = new MailAddress(SenderEmail, "Bingo Admin Security"),
+                        Subject = subject,
+                        Body = body,
+                        IsBodyHtml = false
+                    };
+                    mailMessage.To.Add(email);
+
+                    await client.SendMailAsync(mailMessage);
+                }
+            } 
+            catch (Exception ex) 
+            {
+                // Fallback para debug se falhar (ex: bloqueio de segurança do Gmail)
+                Console.WriteLine("Erro ao enviar email real: " + ex.Message);
+                System.Diagnostics.Debug.WriteLine($"[ERRO EMAIL] {ex.Message}");
+                throw; // Relança para o UI tratar
+            }
         }
     }
 }
