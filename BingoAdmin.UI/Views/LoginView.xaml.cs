@@ -4,6 +4,8 @@ using System.Text.Json; // Added
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Navigation;
+using System.Security.Cryptography; // Added for DPAPI
+using System.Text; // Added for Encoding
 using BingoAdmin.UI.Services;
 using BingoAdmin.Infra.Data;
 using Microsoft.Extensions.DependencyInjection;
@@ -69,10 +71,27 @@ namespace BingoAdmin.UI.Views
                 {
                     var json = File.ReadAllText("uistate.json");
                     var state = JsonSerializer.Deserialize<UiState>(json);
+                    
                     if (state != null && state.RememberMe)
                     {
                         EmailBox.Text = state.SavedEmail;
-                        PasswordBox.Password = state.SavedPassword;
+                        
+                        if (!string.IsNullOrEmpty(state.SavedPassword))
+                        {
+                            try
+                            {
+                                // Decrypt password using Windows DPAPI
+                                byte[] protectedBytes = Convert.FromBase64String(state.SavedPassword);
+                                byte[] bytes = ProtectedData.Unprotect(protectedBytes, null, DataProtectionScope.CurrentUser);
+                                PasswordBox.Password = Encoding.UTF8.GetString(bytes);
+                            }
+                            catch
+                            {
+                                // If decryption fails (e.g. valid old plain text or corrupted), clear it for safety
+                                PasswordBox.Password = "";
+                            }
+                        }
+                        
                         RememberMeCheckBox.IsChecked = true;
                     }
                 }
@@ -93,7 +112,25 @@ namespace BingoAdmin.UI.Views
 
                 state.RememberMe = remember;
                 state.SavedEmail = remember ? email : "";
-                state.SavedPassword = remember ? password : "";
+                
+                if (remember && !string.IsNullOrEmpty(password))
+                {
+                    try
+                    {
+                        // Encrypt password using Windows DPAPI
+                        byte[] bytes = Encoding.UTF8.GetBytes(password);
+                        byte[] protectedBytes = ProtectedData.Protect(bytes, null, DataProtectionScope.CurrentUser);
+                        state.SavedPassword = Convert.ToBase64String(protectedBytes);
+                    }
+                    catch
+                    {
+                        state.SavedPassword = "";
+                    }
+                }
+                else
+                {
+                    state.SavedPassword = "";
+                }
 
                 var options = new JsonSerializerOptions { WriteIndented = true };
                 var newJson = JsonSerializer.Serialize(state, options);
@@ -128,8 +165,8 @@ namespace BingoAdmin.UI.Views
                         // Save Credentials if "Remember Me" is checked
                         SaveCredentials(email, senha, RememberMeCheckBox.IsChecked == true);
 
-                        // Check License
-                        if (usuario.DataValidadeLicenca < DateTime.Now)
+                        // Check License (Skip for Admins)
+                        if (!usuario.IsAdmin && usuario.DataValidadeLicenca < DateTime.Now)
                         {
                             if (_context != null && _emailService != null && _serviceProvider != null)
                             {

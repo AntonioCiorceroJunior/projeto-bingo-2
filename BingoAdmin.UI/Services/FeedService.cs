@@ -1,16 +1,17 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Windows.Threading;
+using System.ComponentModel;
+using System.Linq;
 
 namespace BingoAdmin.UI.Services
 {
-    public class FeedMessage : System.ComponentModel.INotifyPropertyChanged
+    public class FeedMessage : INotifyPropertyChanged
     {
-        public string Title { get; set; }
-        public string Message { get; set; }
+        public string Title { get; set; } = string.Empty;
+        public string Message { get; set; } = string.Empty;
         public DateTime Timestamp { get; set; }
-        public string Type { get; set; } // "Info", "Success", "Warning", "Error"
+        public string Type { get; set; } = "Info"; // "Info", "Success", "Warning", "Error"
         public string FormattedTime => Timestamp.ToString("HH:mm:ss");
 
         private bool _isExpanded;
@@ -20,46 +21,40 @@ namespace BingoAdmin.UI.Services
             set
             {
                 _isExpanded = value;
-                PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(IsExpanded)));
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsExpanded)));
             }
         }
 
-        public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
+        public event PropertyChangedEventHandler? PropertyChanged;
     }
 
     public class FeedService
     {
-        private Dictionary<int, List<FeedMessage>> _history = new Dictionary<int, List<FeedMessage>>();
+        // History: Key = BingoId, Value = List of messages
+        private readonly Dictionary<int, List<FeedMessage>> _history = new();
         private int _currentBingoId = -1;
 
-        public ObservableCollection<FeedMessage> Messages { get; private set; } = new ObservableCollection<FeedMessage>();
+        public ObservableCollection<FeedMessage> Messages { get; } = new ObservableCollection<FeedMessage>();
 
         public void ClearCurrentView()
         {
-            if (System.Windows.Application.Current != null)
-            {
-                System.Windows.Application.Current.Dispatcher.Invoke(() =>
-                {
-                    Messages.Clear();
-                });
-            }
+            SafeInvoke(() => Messages.Clear());
         }
 
         public void ReloadHistory()
         {
             if (_currentBingoId != -1 && _history.ContainsKey(_currentBingoId))
             {
-                if (System.Windows.Application.Current != null)
+                SafeInvoke(() =>
                 {
-                    System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                    Messages.Clear();
+                    // Re-add in correct order (newest first)
+                    // Assuming history is stored newest-first
+                    foreach (var msg in _history[_currentBingoId])
                     {
-                        Messages.Clear();
-                        foreach (var msg in _history[_currentBingoId])
-                        {
-                            Messages.Add(msg);
-                        }
-                    });
-                }
+                        Messages.Add(msg);
+                    }
+                });
             }
         }
 
@@ -69,74 +64,76 @@ namespace BingoAdmin.UI.Services
 
             _currentBingoId = bingoId;
             
-            // Clear current view
-            // Use Dispatcher to be safe, though this method might be called from UI thread usually
-            if (System.Windows.Application.Current != null)
+            SafeInvoke(() =>
             {
-                System.Windows.Application.Current.Dispatcher.Invoke(() =>
-                {
-                    Messages.Clear();
+                Messages.Clear();
 
-                    // Restore history if exists
-                    if (_history.ContainsKey(bingoId))
-                    {
-                        foreach (var msg in _history[bingoId])
-                        {
-                            Messages.Add(msg);
-                        }
-                    }
-                    else
-                    {
-                        // Initialize empty history for new bingo
-                        _history[bingoId] = new List<FeedMessage>();
-                        // Optional: Add a welcome message
-                        string name = !string.IsNullOrEmpty(bingoName) ? bingoName : $"Bingo {bingoId}";
-                        AddMessage("Sistema", $"Feed conectado ao {name}", "Info");
-                    }
-                });
-            }
+                if (!_history.ContainsKey(bingoId))
+                {
+                    _history[bingoId] = new List<FeedMessage>();
+                    string name = !string.IsNullOrEmpty(bingoName) ? bingoName : $"Bingo {bingoId}";
+                    // Don't add directly here to avoid infinite loop or context issues, call internal helper if needed
+                    // But AddMessage handles _currentBingoId check
+                }
+
+                // Restore history
+                foreach (var msg in _history[bingoId])
+                {
+                    Messages.Add(msg);
+                }
+                
+                if (Messages.Count == 0 && !string.IsNullOrEmpty(bingoName))
+                {
+                     AddMessage("Sistema", $"Feed conectado ao {bingoName}", "Info");
+                }
+            });
         }
 
         public void AddMessage(string title, string message, string type = "Info")
         {
-            // Ensure UI updates happen on the UI thread if called from background
+            SafeInvoke(() =>
+            {
+                var msg = new FeedMessage
+                {
+                    Title = title,
+                    Message = message,
+                    Timestamp = DateTime.Now,
+                    Type = type
+                };
+
+                // Add to View
+                Messages.Insert(0, msg);
+
+                // Trim View
+                while (Messages.Count > 50)
+                {
+                    Messages.RemoveAt(Messages.Count - 1);
+                }
+
+                // Add to History (if context is active)
+                if (_currentBingoId != -1)
+                {
+                    if (!_history.ContainsKey(_currentBingoId))
+                    {
+                        _history[_currentBingoId] = new List<FeedMessage>();
+                    }
+
+                    _history[_currentBingoId].Insert(0, msg);
+
+                    // Trim History
+                    if (_history[_currentBingoId].Count > 100)
+                    {
+                        _history[_currentBingoId].RemoveAt(_history[_currentBingoId].Count - 1);
+                    }
+                }
+            });
+        }
+
+        private void SafeInvoke(Action action)
+        {
             if (System.Windows.Application.Current != null)
             {
-                System.Windows.Application.Current.Dispatcher.Invoke(() =>
-                {
-                    var msg = new FeedMessage
-                    {
-                        Title = title,
-                        Message = message,
-                        Timestamp = DateTime.Now,
-                        Type = type
-                    };
-
-                    Messages.Insert(0, msg);
-
-                    // Keep only last 50 messages in View
-                    if (Messages.Count > 50)
-                    {
-                        Messages.RemoveAt(Messages.Count - 1);
-                    }
-
-                    // Update History
-                    if (_currentBingoId != -1)
-                    {
-                        if (!_history.ContainsKey(_currentBingoId))
-                        {
-                            _history[_currentBingoId] = new List<FeedMessage>();
-                        }
-                        
-                        _history[_currentBingoId].Insert(0, msg);
-                        
-                        // Keep history slightly larger or same size
-                        if (_history[_currentBingoId].Count > 100)
-                        {
-                            _history[_currentBingoId].RemoveAt(_history[_currentBingoId].Count - 1);
-                        }
-                    }
-                });
+                System.Windows.Application.Current.Dispatcher.Invoke(action);
             }
         }
 

@@ -12,8 +12,17 @@ namespace BingoCleaner
             Console.WriteLine("Cleaning AZURE Database...");
             
             var optionsBuilder = new DbContextOptionsBuilder<BingoContext>();
-            var azureConnectionString = "Server=tcp:bingoserver-ciorcero.database.windows.net,1433;Initial Catalog=BingoDB;Persist Security Info=False;User ID=bingoadmin;Password=123456789Antoniociorcero;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;";
             
+            // SECURITY FIX: Read from Environment Variable or prompt user. Do not hardcode credentials.
+            var azureConnectionString = Environment.GetEnvironmentVariable("BINGO_AZURE_CONNECTION") 
+                                      ?? "Server=tcp:YOUR_SERVER.database.windows.net;Database=BingoDB;User Id=user;Password=password;";
+            
+            if (azureConnectionString.Contains("YOUR_SERVER"))
+            {
+                Console.WriteLine("CRITICAL: Azure Connection String not configured. Please set BINGO_AZURE_CONNECTION env var.");
+                return;
+            }
+
             optionsBuilder.UseSqlServer(azureConnectionString);
 
             using (var context = new BingoContext(optionsBuilder.Options))

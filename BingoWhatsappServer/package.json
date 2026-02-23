@@ -1,0 +1,18 @@
+{
+  "name": "bingo-whatsapp-server",
+  "version": "1.0.0",
+  "description": "Servidor de Automacao WhatsApp para BingoAdmin",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js"
+  },
+  "dependencies": {
+    "@wppconnect-team/wppconnect": "^1.28.0",
+    "cors": "^2.8.6",
+    "dotenv": "^16.0.0",
+    "express": "^5.2.1"
+  },
+  "author": "BingoAdmin",
+  "license": "ISC"
+}

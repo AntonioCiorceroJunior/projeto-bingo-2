@@ -262,3 +262,12 @@ test_write.txt
 build_errors.txt
 uistate.json
 *.cfg
+
+# Temporary/Local files
+startup_log.txt
+task_output.txt
+test_write.txt
+build_errors.txt
+uistate.json
+*.cfg
+RESUMO_RECUPERADO_22_01.txt

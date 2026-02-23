@@ -18,38 +18,79 @@ namespace BingoAdmin.UI.Services
         // 2. Gere uma credencial de Produção
         // 3. Cole o 'Access Token' abaixo e mude UseMercadoPago = true;
         
-        private const bool UseMercadoPago = false; // MUDE PARA TRUE APÓS COLOCAR O TOKEN
-        private const string MpAccessToken = "SEU_ACCESS_TOKEN_AQUI"; 
-        
-        // Configuração Manual (Chave Pix Pessoal)
-        private const string PixKey = "+5541987733337"; 
-        private const string MerchantName = "Bingo Admin";
-        private const string MerchantCity = "Curitiba";
-        
-        private readonly HttpClient _httpClient = new HttpClient();
+        private readonly IConfiguration _configuration;
+        private readonly BancoInterService _bancoInterService;
+        private readonly HttpClient _httpClient = new HttpClient(); // For MercadoPago
 
-        public PaymentResponse CreatePixPayment(decimal amount, string description)
+        public PaymentService(IConfiguration configuration, BancoInterService bancoInterService)
         {
-            if (UseMercadoPago)
+            _configuration = configuration;
+            _bancoInterService = bancoInterService;
+        }
+
+        public async Task<PaymentResponse> CreatePixPayment(decimal amount, string description)
+        {
+            // 1. Tenta Banco Inter
+            string interClient = _configuration["PaymentSettings:InterClientId"];
+            if (!string.IsNullOrEmpty(interClient))
             {
-                // Implementação Real via API (Síncrona por simplicidade, idealmente Async)
-                try {
-                    return CreateMercadoPagoPreference(amount, description).Result;
-                } catch {
+                try 
+                {
+                    // Usa CPF/Nome genérico ou do usuário logado se disponível (aqui usamos genérico por simplicidade)
+                    // TODO: Passar dados reais do usuário pagador
+                    var (txId, copyPaste) = await _bancoInterService.CriarCobrancaPixImediata("12345678909", "Cliente Bingo", amount);
+                    
+                    return new PaymentResponse
+                    {
+                        TransactionId = "INTER-" + txId, // Prefixo INTER- pra saber a origem depois
+                        CopyPasteCode = copyPaste,
+                        Amount = amount,
+                        Status = "pending",
+                        Message = "Pagamento via Banco Inter (Automático)"
+                    };
+                }
+                catch (Exception ex)
+                {
+                   System.Diagnostics.Debug.WriteLine($"Erro Banco Inter: {ex.Message}");
+                }
+            }
+
+            // 2. Tenta Mercado Pago
+            bool useMercadoPago = !string.IsNullOrEmpty(_configuration["PaymentSettings:MercadoPagoAccessToken"]);
+            if (useMercadoPago)
+            {
+                try 
+                {
+                    return await CreateMercadoPagoPreference(amount, description);
+                } 
+                catch 
+                {
                     // Fallback para manual se falhar
                     return CreateManualPix(amount);
                 }
             }
-            else
-            {
-                return CreateManualPix(amount);
-            }
+
+            // 3. Fallback Manual
+            return CreateManualPix(amount);
         }
 
         private PaymentResponse CreateManualPix(decimal amount)
         {
+            var pixKey = _configuration["PaymentSettings:PixKey"];
+            var merchantName = _configuration["PaymentSettings:MerchantName"];
+            var merchantCity = _configuration["PaymentSettings:MerchantCity"];
+
+            if (string.IsNullOrEmpty(pixKey) || pixKey.Contains("00000000"))
+            {
+                return new PaymentResponse 
+                { 
+                    Status = "error", 
+                    Message = "Chave Pix não configurada no appsettings.json" 
+                };
+            }
+
             var txId = "BINGO" + DateTime.Now.Ticks.ToString().Substring(10);
-            var payload = PixGenerator.GeneratePayload(PixKey, amount, MerchantName, MerchantCity, txId);
+            var payload = PixGenerator.GeneratePayload(pixKey, amount, merchantName, merchantCity, txId);
 
             return new PaymentResponse
             {
@@ -63,8 +104,9 @@ namespace BingoAdmin.UI.Services
 
         private async Task<PaymentResponse> CreateMercadoPagoPreference(decimal amount, string description)
         {
+            var token = _configuration["PaymentSettings:MercadoPagoAccessToken"];
             var request = new HttpRequestMessage(HttpMethod.Post, "https://api.mercadopago.com/v1/payments");
-            request.Headers.Add("Authorization", $"Bearer {MpAccessToken}");
+            request.Headers.Add("Authorization", $"Bearer {token}");
 
             var body = new
             {
@@ -104,7 +146,28 @@ namespace BingoAdmin.UI.Services
 
         public async Task<string> CheckPaymentStatusAsync(string transactionId)
         {
-            if (UseMercadoPago)
+            // 1. Banco Inter
+            if (transactionId.StartsWith("INTER-"))
+            {
+                try 
+                {
+                    string realTxId = transactionId.Replace("INTER-", "");
+                    string status = await _bancoInterService.ConsultarStatusPix(realTxId);
+                    
+                    // Mapear status do Inter para o app
+                    if (status.ToUpper() == "CONCLUIDA") return "approved";
+                    if (status.ToUpper() == "ATIVA") return "pending";
+                    return "rejected";
+                }
+                catch 
+                {
+                    return "pending";
+                }
+            }
+
+            // 2. Mercado Pago
+            bool useMercadoPago = !string.IsNullOrEmpty(_configuration["PaymentSettings:MercadoPagoAccessToken"]);
+            if (useMercadoPago)
             {
                 try 
                 {

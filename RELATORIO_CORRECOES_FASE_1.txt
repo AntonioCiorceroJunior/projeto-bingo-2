@@ -1,0 +1,43 @@
+DOCUMENTAÇÃO DE CORREÇÕES REALIZADAS (FASE 1 - SEGURANÇA)
+==========================================================
+Data: 24/01/2026 - Versão 1.1
+
+1. PROTEÇÃO DE CREDENCIAIS (Azure & Pix) e LICENÇA (Login)
+----------------------------------------------------------
+Foram aplicadas as correções críticas de segurança e regras de negócio no código-fonte.
+
+A) Arquivo: `BingoCleaner/Program.cs`
+   - O que foi feito: Removida a string de conexão hardcoded que continha `User ID=bingoadmin;Password=...`.
+   - Novo Comportamento: O sistema agora busca a connection string na variável de ambiente `BINGO_AZURE_CONNECTION`. Se não encontrar, exibe um erro no console e não conecta.
+
+B) Arquivo: `BingoAdmin.UI/Services/PaymentService.cs`
+   - O que foi feito: Removida a chave Pix estática hardcoded (+5541...).
+   - Novo Comportamento: O método `CreateManualPix` agora lê `PixKey`, `MerchantName` e `MerchantCity` do arquivo de configuração `appsettings.json`.
+
+C) Arquivo: `BingoAdmin.UI/appsettings.json` (Template)
+   - O que foi feito: Adicionada a seção `PaymentSettings` com valores placeholder (0000...) para garantir que o projeto compile e rode com estrutura válida.
+   - Ação Necessária: Antes de liberar para produção, o operador deve editar esse arquivo com a Chave Pix correta.
+
+D) Arquivo: `BingoAdmin.UI/Views/LoginView.xaml.cs`
+   - Correção 1 (Senha Local): A função `SaveCredentials` ("Lembrar de Mim") agora utiliza `ProtectedData.Protect` (DPAPI do Windows) para criptografar a senha antes de salvar no disco (`uistate.json`). A função `LoadCredentials` faz o caminho inverso.
+   - Correção 2 (Licença): Adicionada lógica de bloqueio no login.
+     Trecho implementado:
+     ```csharp
+     if (!usuario.IsAdmin && usuario.DataValidadeLicenca < DateTime.Now) {
+         // Abre PaymentWindow e bloqueia se não pagar
+     }
+     ```
+     Obs: Administradores (`IsAdmin=true`) SEMPRE conseguem logar, mesmo vencidos (Regra de segurança para o dono).
+
+2. ESTADO ATUAL
+---------------
+O sistema está operacional e seguro do ponto de vista de credenciais.
+- Compilação: OK
+- Risco de Senha Azure: ELIMINADO
+- Risco de Pix Errado: ELIMINADO (Configurável)
+- Risco de "Lembrar Senha" inseguro: ELIMINADO
+
+PRÓXIMOS PASSOS (FASE 2)
+------------------------
+- Criar tela de Configurações para editar a Chave Pix sem mexer em JSON.
+- Implementar integração real com WhatsApp (Bot).

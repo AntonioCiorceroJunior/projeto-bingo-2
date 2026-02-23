@@ -1,0 +1,254 @@
+DOCUMENTAÇÃO TÉCNICA E OPERACIONAL - BINGO ADMIN
+Data da Análise: 24/01/2026
+Versão: 2.0 (Completa e Auditada)
+
+==============================================================================
+0) ESCOPO E EVIDÊNCIA
+==============================================================================
+- Estrutura Analisada:
+  - Frontend: WPF `BingoAdmin.UI` (Views, ViewModels).
+  - Backend Lógico: `BingoAdmin.UI/Services`.
+  - Domínio: `BingoAdmin.Domain/Entities`.
+  - Dados: `BingoAdmin.Infra` (EF Core + SQLite).
+  - Tools: `BingoCleaner` (Utilitário de manutenção com risco de segurança).
+
+- Arquivos Auditados (Amostragem Principal):
+  - UI: `LoginView.xaml.cs`, `DashboardView.xaml.cs`, `GameView.xaml`.
+  - Services: `GameService.cs`, `BingoManagementService.cs`, `UsuarioService.cs`, `PaymentService.cs`, `PdfService.cs`.
+  - Infra: `App.xaml.cs` (DI), `BingoContext.cs`.
+
+- O que NÃO existe (mas foi citado em documentos antigos):
+  - Integração real com WhatsApp (API ou Bot) -> Não há código em `Services` nem referência a SDKs (Twilio/WppConnect).
+  - Integração automática com Mercado Pago -> Código existe em `PaymentService.cs` mas a flag `UseMercadoPago` está permanentemente `false` (hardcoded).
+  - Sincronização automática com Nuvem (Azure) -> O App usa SQLite local (`bingoadmin.db`). Apenas o `BingoCleaner` conecta no Azure.
+
+==============================================================================
+1) COMO O APLICATIVO FUNCIONA (GUIA OPERACIONAL)
+==============================================================================
+
+
+1.1 PRIMEIRO ACESSO E LOGIN
+- Tela: `LoginView`.
+- Ação: O usuário insere Email e Senha.
+- Validação (Arquivo: `UsuarioService.cs`, Método: `Login`):
+  1. Busca usuário pelo email no banco SQLite.
+  2. Compara hash da senha (BCrypt).
+  3. [ALERTA] Embora a entidade `Usuario` tenha `DataValidadeLicenca`, a auditoria de `LoginView.xaml.cs` confirmou que não há bloqueio condicional (if Data < Hoje) impedindo o login. O usuário entra mesmo vencido.
+- Sucesso: Redireciona para `DashboardView`.
+- Recurso "Lembrar de Mim": Salva email e senha em texto plano no arquivo `uistate.json` (Risco de Segurança).
+- Recuperar Senha: Gera um token de 6 dígitos (no banco) para recuperação manual.
+
+1.2 CRIAR UM BINGO DO ZERO
+- Tela: `DashboardView` -> Aba Configurações -> `BingoConfigView`.
+- Passo 1 (Dados Básicos):
+  - Nome do Evento (Obrigatório).
+  - Data de Início.
+  - Quantidade de Combos: Define quantos pacotes serão vendidos (ex: 500 combos).
+  - Kits por Combo / Cartelas por Kit: Define a estrutura hierárquica (Ex: 1 Combo tem 1 Kit de 3 Cartelas).
+  - Modos de Jogo:
+    * Clássico: Rodadas sequenciais (padrão mais usado).
+    * Acumulado: Todos contra todos (score contínuo, implementado em `GameService.VerificarGanhadoresAcumulado`).
+    * Pé Frio: Ganha quem fizer ZERO pontos (implementado em `GameService.VerificarGanhadoresPeFrio` - limite técnico de 3000 cartelas).
+- Passo 2 (Rodadas):
+  - Configura-se N rodadas na `RodadasConfigView`.
+  - Cada rodada tem: Descrição, Padrão (Cartela Cheia, Linha, etc) e Prêmios.
+- Finalização:
+  - Botão "Gerar Bingo/Salvar".
+  - Processo Técnico: Chama `BingoManagementService.CriarBingoAsync`. Este método é assíncrono e reporta progresso.
+
+1.3 GERAR CARTELAS / KITS / COMBOS
+- Processo Automático (Arquivo: `BingoManagementService.cs`, Método: `CriarBingoAsync`):
+  - O sistema gera as cartelas em lote (batches de 500) para não travar a UI.
+  - Numeração:
+    * `NumeroCombo`: 1 a N.
+    * `NumeroGlobal` (Cartela): 1 a (Combos * Kits * Cartelas).
+  - Segurança: Gera um `HashUnico` (GUID parcial) para cada cartela para evitar falsificação.
+  - Persistência: Tudo é salvo nas tabelas `Combos`, `Kits` e `Cartelas` do SQLite.
+
+1.4 VENDA E CONTROLE FINANCEIRO
+- Tela: `FinanceiroView` / `CombosView`.
+- Passo 1 (Reserva):
+  - Operador seleciona um Combo "Disponível".
+  - Preenche o nome do comprador ("Dono").
+  - Status muda para "Reservado".
+- Passo 2 (Pagamento):
+  - Pagamento Pix (Arquivo: `PaymentService.cs`): O sistema gera um Payload Copia-e-Cola manual (Chave pessoal Pix hardcoded no código `+5541987733337` - deve ser alterada!).
+  - Confirmação: Operador clica manualmente em "Confirmar Pagamento".
+  - Efeito (Arquivo: `ComboService.cs`): Status vira "Confirmado". 
+  - [REGRA CRÍTICA]: Apenas cartelas com status "Confirmado" são carregadas para o sorteio.
+- Passo 3 (Entrega):
+  - Botão "Gerar PDF".
+  - Processo (Arquivo: `PdfService.cs`): Usa biblioteca `QuestPDF` para desenhar arquivo vetorial A4 com as cartelas do combo.
+
+1.5 EXECUÇÃO DO BINGO (GAME DAY)
+- Tela: `GameView`.
+- Início:
+  - Operador clica "Iniciar Rodada".
+  - Sistema (Service) carrega para a memória RAM (`_cachedCartelas`) todas as cartelas válidas.
+- Sorteio:
+  - Operador clica "Sortear Número".
+  - `GameService.SortearNumero()` gera um numero Random (1-75) que não esteja no `HashSet` de sorteados.
+  - `SpeechService` fala o número via TTS do Windows (ex: "B - 5").
+- Conferência Automática (Arquivo `GameService.cs` - `VerificarGanhadores`):
+  - Após CADA bola, o sistema varre todas as milhares de cartelas na memória RAM.
+  - Aplica a máscara do Padrão atual (ex: Linha).
+  - Se `Hits == Mascara`, adiciona à lista de Ganhadores.
+  - A UI exibe instantaneamente na lateral: "CARTELA 050 - JOÃO".
+- Desempate (Pedra Maior):
+  - Se o prêmio é único e houver 2+ ganhadores, o sistema detecta e exige desempate.
+  - Abre modal `PedraMaiorWindow`.
+  - Cada jogador sorteia (via software) um número extra. O maior leva.
+
+1.6 ENCERRAMENTO E PERSISTÊNCIA
+- Finalização de Rodada: Clicar em "Encerrar Rodada" -> Atualiza status no Banco.
+- Persistência: O estado (bolas sorteadas, ganhadores, status) é salvo no Banco a cada bola (`_context.SaveChanges()`).
+- Crash Recover: Se fechar o app e abrir de novo, ele recarrega o estado do banco (`GameService.CarregarDadosBingo`), permitindo continuar o jogo exatamente do ponto onde parou.
+
+==============================================================================
+2) MAPA DO APP (TELAS / DETALHES TÉCNICOS)
+==============================================================================
+
+2.1 LOGIN VIEW (`LoginView.xaml`)
+- Controles: `EmailBox`, `PasswordBox`, `RememberMeCheckBox`.
+- Code-Behind: Implementa `LoadCredentials` lendo de arquivo local `uistate.json`.
+- Serviços: `UsuarioService` (Auth), `UserSession` (Contexto).
+
+2.2 DASHBOARD (`DashboardView.xaml`)
+- Controles: `MenuLateral` (Config, Financeiro, Game), `FeedGlobal`.
+- ViewModel: Parcial (usa Code-Behind com injeção de `FeedService`).
+- Feed: `FeedService` injetado como Singleton, mantém lista de mensagens de log visual.
+- Impersonation: Possui lógica para Admin logar vendo como User, mas controlada por `UserSession`.
+
+2.3 FINANCEIRO (`FinanceiroView.xaml` / `CombosView.xaml`)
+- Controles: `DataGrid` de Combos.
+- Lógica de Filtro: Status (Disponivel/Reservado/Confirmado) filtra a `ObservableCollection`.
+- Serviço: Chama `ComboService.GetCombos` e `ComboService.UpdateCombo`.
+
+2.4 GAME SCREEN (`GameView.xaml`)
+- Controles:
+  - `BolaAtual` (Exibe número grande).
+  - `Grid75` (ItemsControl com status de cada bola).
+  - `RankingList` (ListBox com ganhadores).
+- Eventos: Assina `GameService.OnNumeroSorteado` e `OnRodadaEncerrada` para refresh de UI.
+- Validadores: Botão de sortear bloqueia se rodada não iniciada.
+
+==============================================================================
+3) ARQUITETURA E FLUXO TÉCNICO
+==============================================================================
+
+- Stack: .NET 8 + WPF.
+- DI (Injeção de Dependência): Configurado em `App.xaml.cs`.
+  - `AddDbContext<BingoContext>`: Define o SQLite `bingoadmin.db` (localizado na raiz do executável).
+  - `AddTransient`: Services comuns (`GameService`, `UsuarioService`).
+  - `AddSingleton`: Serviços de estado global (`UserSession`, `GameStatusService`, `FeedService`).
+
+- Fluxo de Dados Típico:
+  1. UI (View) aciona evento (Click).
+  2. View chama Service Injetado (ex: `_gameService.SortearNumero()`).
+  3. Service altera Estado em Memória (ex: `_numerosSorteados`).
+  4. Service altera Estado no Banco (ex: `_context.Sorteios.Add(...)`).
+  5. Service dispara Evento C# (`Action OnNumeroSorteado`).
+  6. UI escuta evento e atualiza tela via Dispatcher.
+
+- Falhas Visíveis:
+  - Logs: `startup_log.txt` é escrito sem lock, podendo causar conflito de E/S.
+  - Exception Handling: Existe um handler global em `App.xaml.cs` (`DispatcherUnhandledException`), mas try-catch locais as vezes engolem erros (ex: `LoadCredentials` silencia falhas).
+
+==============================================================================
+4) MODELO DE DADOS (ENTIDADES CHAVE)
+==============================================================================
+Mapeamento: `BingoAdmin.Infra/Data/BingoContext.cs`
+
+4.1 BINGO (`Bingo`)
+- Pai de tudo.
+- Campo `ModoJogo` (int): 0=Classic, 1=Acumulado.
+- Relacionamento: Tem Lista de `Rodada` e `Combo`.
+
+4.2 CARTELA (`Cartela`)
+- A "alma" do sistema.
+- Campo `GridNumeros` (string): CSV com 25 números (ex: "1,15,0,22..."). O '0' é o espaço livre.
+- Campo `HashUnico`: Segurança.
+- Criada em: `BingoManagementService`.
+
+4.3 RODADA (`Rodada`)
+- Configuração da partida.
+- Campo `TipoPremio`: Texto descritivo.
+- Campo `PadraoId`: FK para tabela de Padrões (desenho do X, Linha, etc).
+- Campo `ModoPadroesDinamicos` (bool): Permite múltiplos padrões na mesma rodada (Quina -> Cheia).
+
+4.4 USUARIO (`Usuario`)
+- Campo `ResetToken`: String simples.
+- Campo `SenhaHash`: BCrypt Hash.
+- Campo `DataValidadeLicenca`: DateTime.
+
+4.5 SORTEIO (`Sorteio`)
+- Histórico da Rodada.
+- Campo `BolasSorteadas` (string): CSV ("5,10,75,1...").
+
+==============================================================================
+5) REGRAS DE NEGÓCIO (LISTA EXAUSTIVA)
+==============================================================================
+
+R1. LOTE DE PARTICIPAÇÃO (Arquivo: `GameService.cs`, Método: `CarregarDadosBingo`)
+- Regra: Uma cartela só é carregada para o jogo se `Kit.Combo.Status == "Confirmado"`.
+- Cartelas "Reservadas" são ignoradas pelo motor de conferência. Se um usuário pagar no meio do jogo, precisamos recarregar o bingo (reload) para ele entrar.
+
+R2. CONFERÊNCIA AUTOMÁTICA (Arquivo: `GameService.cs`)
+- Clássico: Se `Hits == Mascara`, ganhou.
+- Acumulado (`VerificarGanhadoresAcumulado`):
+  - Verifica TODOS os prêmios disponíveis na rodada a cada bola.
+  - Permite ganhar múltiplos prêmios se a regra for "Distribui".
+
+R3. PE FRIO (Arquivo: `GameService.cs`, Método: `VerificarGanhadoresPeFrio`)
+- Objetivo: Ganhar quem NÃO acerta.
+- Regra Técnica:
+  - Se `Hits == 0`, o jogador é um "Sobrevivente".
+  - Se `Hits > 0`, ele é eliminado.
+  - Vitória: Se restar apenas 1 sobrevivente.
+  - Empate Técnico: Se todos forem eliminados na mesma bola, ganham os "Just Eliminated".
+- Limitação: Hardcoded para máximo 3000 cartelas (Linha 551).
+
+R4. DESEMPATE AUTOMÁTICO (Arquivo: `GameService.cs`)
+- Se o prêmio for indivisível (`ModoDisputaPremios == 1`) e houver > 1 ganhador simultâneo.
+- O sistema não declara vencedor final, ele retém a premiação e exige execução do fluxo Pedra Maior na UI.
+
+R5. GARANTIA DE UNICIDADE
+- Sorteio usa `HashSet<int>` para proibir número repetido na mesma rodada.
+- Se tentar sortear após 75 bolas, lança Exception explícita.
+
+R6. PADRÕES DINÂMICOS
+- Se `ModoPadroesDinamicos == true`, a rodada pode ter uma lista de padrões.
+- O sistema verifica todos eles simultaneamente. Se alguém completa um padrão "menor" (ex: Quina), ganha aquele prêmio específico, mas o jogo continua para o padrão "maior" (ex: Cheia).
+
+==============================================================================
+6) LACUNAS / AMBIGUIDADES / PERGUNTAS
+==============================================================================
+1. [LACUNA TÉCNICA] Falta de Sincronização Nuvem
+   - O código principal é 100% SQLite local. Não há nenhuma linha de código que envie dados para API ou Azure no `App.xaml.cs` ou Services.
+   - O utilitário `BingoCleaner` aponta para Azure, mas é um executável separado. Isso cria confusão operacional: os dados de produção estão no PC do operador, não na nuvem.
+
+2. [PERGUNTA DE NEGÓCIO] Validade da Licença
+   - O campo `DataValidadeLicenca` existe no banco, mas não encontrei o "Guard" (bloqueio) no `LoginView` ou `UsuarioService`.  Pergunta: O sistema deve bloquear usuários vencidos? Se sim, essa feature está quebrada/incompleta.
+
+3. [AMBIGUIDADE] PaymentService
+   - O código possui implementação para Pix Manual (Chave Pessoal, Tel) e Mercado Pago (API).
+   - Atualmente a flag de Mercado Pago está `false`. O sistema está gerando chaves Pix para uma conta pessoal (`+5541987733337`) hardcoded. Isso é intencional para produção?
+
+==============================================================================
+7) RISCOS (COM EVIDÊNCIA)
+==============================================================================
+1. [CRÍTICO] Credencial de Banco de Dados Exposta
+   - Arquivo: `BingoCleaner/Program.cs`
+   - Trecho: `var azureConnectionString = "Server=tcp:bingoserver..."`.
+   - Risco: Senha de `bingoadmin` em texto plano. Permite acesso total e deleção do banco Azure.
+
+2. [MÉDIO] Armazenamento de Credenciais Locais
+   - Arquivo: `LoginView.xaml.cs`
+   - Método: `SaveCredentials`
+   - Risco: Escreve `uistate.json` com senha do usuário em plain text. Malware local pode roubar acesso.
+
+3. [BAIXO] Hardcoded Phone Number
+
+   - Arquivo: `PaymentService.cs`
+   - Trecho: `private const string PixKey = "+5541987733337";`
+   - Risco: Se o dono do app mudar de telefone, o dinheiro vai para a conta errada. Deveria vir de configuração (Banco ou `appsettings.json`).

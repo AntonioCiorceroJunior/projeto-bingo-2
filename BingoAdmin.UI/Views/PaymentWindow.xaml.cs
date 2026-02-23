@@ -51,17 +51,17 @@ namespace BingoAdmin.UI.Views
             }
         }
 
-        private void PayDaily_Click(object sender, RoutedEventArgs e)
+        private async void PayDaily_Click(object sender, RoutedEventArgs e)
         {
-            StartPixPayment(50.00m, "Acesso Diário");
+            await StartPixPayment(50.00m, "Acesso Diário");
         }
 
-        private void PayMonthly_Click(object sender, RoutedEventArgs e)
+        private async void PayMonthly_Click(object sender, RoutedEventArgs e)
         {
-            StartPixPayment(400.00m, "Acesso Mensal");
+            await StartPixPayment(400.00m, "Acesso Mensal");
         }
 
-        private void StartPixPayment(decimal amount, string description)
+        private async System.Threading.Tasks.Task StartPixPayment(decimal amount, string description)
         {
             PaymentPanel.Visibility = Visibility.Collapsed;
             PixPaymentPanel.Visibility = Visibility.Visible;
@@ -70,20 +70,26 @@ namespace BingoAdmin.UI.Views
             PixAmountText.Text = $"Valor: {amount:C}";
             _currentAmount = amount;
 
-            GeneratePixQrCode(amount);
+            await GeneratePixQrCode(amount);
             
             // Start Polling
             _paymentCheckTimer.Start();
         }
 
-        private void GeneratePixQrCode(decimal amount)
+        private async System.Threading.Tasks.Task GeneratePixQrCode(decimal amount)
         {
             try
             {
-                var response = _paymentService.CreatePixPayment(amount, PixPlanText.Text);
+                var response = await _paymentService.CreatePixPayment(amount, PixPlanText.Text);
                 
                 _currentTransactionId = response.TransactionId;
                 PixCopyBox.Text = response.CopyPasteCode;
+
+                if (!string.IsNullOrEmpty(response.Message))
+                {
+                    // Show origin in debug or status bar
+                    // MessageBox.Show(response.Message); 
+                }
 
                 // Generate QR Code Image
                 using (QRCodeGenerator qrGenerator = new QRCodeGenerator())
@@ -125,7 +131,7 @@ namespace BingoAdmin.UI.Views
             {
                 _paymentCheckTimer.Stop();
                 MessageBox.Show("Pagamento não identificado ou recusado.\nGerando novo código...", "Erro no Pagamento");
-                GeneratePixQrCode(_currentAmount); // Regenerate
+                await GeneratePixQrCode(_currentAmount); // Regenerate
                 _paymentCheckTimer.Start();
             }
         }

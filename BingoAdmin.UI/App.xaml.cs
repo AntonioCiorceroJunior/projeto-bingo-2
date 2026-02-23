@@ -90,6 +90,7 @@ namespace BingoAdmin.UI
                         services.AddTransient<FinanceiroService>();
                         services.AddTransient<EmailService>();
                         services.AddTransient<PaymentService>();
+                        services.AddTransient<BancoInterService>();
                         services.AddTransient<FraseService>();
                         
                         // Global Services

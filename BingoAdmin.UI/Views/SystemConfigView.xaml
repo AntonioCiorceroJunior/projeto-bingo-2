@@ -1,0 +1,92 @@
+<UserControl x:Class="BingoAdmin.UI.Views.SystemConfigView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             mc:Ignorable="d" 
+             d:DesignHeight="600" d:DesignWidth="800">
+    <Grid Margin="20" Background="White">
+        <StackPanel MaxWidth="600" HorizontalAlignment="Left">
+            <TextBlock Text="Configurações do Sistema" FontSize="24" FontWeight="Bold" Margin="0,0,0,20"/>
+
+            <GroupBox Header="Configurações de Pagamento (Pix)" Margin="0,0,0,20" Padding="15">
+                <StackPanel>
+                    <TextBlock Text="Chave Pix:" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                    <TextBox x:Name="PixKeyBox" Padding="5"/>
+                    <TextBlock Text="Ex: +5541999999999 ou email@pix.com.br" FontSize="11" Foreground="Gray" Margin="0,0,0,15"/>
+
+                    <TextBlock Text="Nome do Recebedor (Merchant Name):" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                    <TextBox x:Name="MerchantNameBox" Padding="5" Margin="0,0,0,15"/>
+
+                    <TextBlock Text="Cidade do Recebedor (Merchant City):" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                    <TextBox x:Name="MerchantCityBox" Padding="5" Margin="0,0,0,5"/>
+                </StackPanel>
+            </GroupBox>
+
+            <GroupBox Header="Integração Banco Inter (API - PIX)" Margin="0,0,0,20" Padding="15">
+                <StackPanel>
+                    <TextBlock Text="Client ID:" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                    <TextBox x:Name="InterClientIdBox" Padding="5" Margin="0,0,0,10"/>
+
+                    <TextBlock Text="Client Secret:" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                    <PasswordBox x:Name="InterClientSecretBox" Padding="5" Margin="0,0,0,10"/>
+
+                    <TextBlock Text="Caminho do Certificado (.crt):" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBox x:Name="InterCertBox" Padding="5" Margin="0,0,5,0"/>
+                        <Button Content="..." Click="SelectCert_Click" Grid.Column="1" Padding="10,5"/>
+                    </Grid>
+
+                    <TextBlock Text="Caminho da Chave (.key):" FontWeight="SemiBold" Margin="0,10,0,5"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBox x:Name="InterKeyBox" Padding="5" Margin="0,0,5,0"/>
+                        <Button Content="..." Click="SelectKey_Click" Grid.Column="1" Padding="10,5"/>
+                    </Grid>
+                    
+                    <TextBlock Text="Atenção: A conta PJ do Inter é necessária. Gere as credenciais no Internet Banking." 
+                               FontSize="11" Foreground="Blue" TextWrapping="Wrap" Margin="0,5,0,0"/>
+
+                    <Button Content="Testar Conexão Inter" Click="TestInter_Click" Margin="0,15,0,0" Padding="10,5" HorizontalAlignment="Left" Background="#EEE"/>
+                </StackPanel>
+            </GroupBox>
+
+            <GroupBox Header="Banco de Dados (Azure)" Margin="0,0,0,20" Padding="15">
+                <StackPanel>
+                    <TextBlock Text="Status da Conexão:" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
+                         <Ellipse Width="12" Height="12" Fill="{Binding DbStatusColor, FallbackValue=Gray}" Margin="0,0,10,0"/>
+                         <TextBlock Text="{Binding DbStatusText, FallbackValue=Desconhecido}" VerticalAlignment="Center"/>
+                    </StackPanel>
+
+                    <TextBlock Text="String de Conexão (Mascarada):" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBox x:Name="DbConnectionStringBox" IsReadOnly="True" Background="#F0F0F0" Padding="5" Width="450" Text="Server=tcp:****.database.windows.net..."/>
+                        <Button Content="Testar Conexão" Click="TestDb_Click" Margin="10,0,0,0" Padding="10,5"/>
+                    </StackPanel>
+                    <TextBlock Text="A conexão com o Azure é configurada via Variável de Ambiente: BINGO_AZURE_CONNECTION" 
+                               FontSize="11" Foreground="Red" TextWrapping="Wrap" Margin="0,5,0,0"/>
+                </StackPanel>
+            </GroupBox>
+
+            <Button Content="Salvar Configurações" Click="SaveConfig_Click" 
+                    Background="#27ae60" Foreground="White" FontWeight="Bold" Padding="20,10" 
+                    HorizontalAlignment="Left" Width="200">
+                <Button.Resources>
+                    <Style TargetType="Border">
+                        <Setter Property="CornerRadius" Value="4"/>
+                    </Style>
+                </Button.Resources>
+            </Button>
+            
+            <TextBlock x:Name="StatusMessage" Foreground="Green" Margin="0,10,0,0" FontWeight="Bold"/>
+        </StackPanel>
+    </Grid>
+</UserControl>

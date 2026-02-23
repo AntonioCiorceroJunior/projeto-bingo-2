@@ -50,9 +50,10 @@ namespace BingoAdmin.UI.Views
                 
                 // Hide admin tab when impersonating (to see what user sees)
                 AdminTab.Visibility = Visibility.Collapsed;
+                SystemConfigTab.Visibility = Visibility.Collapsed;
                 
                 // Switch to first tab to prevent being stuck in hidden tab
-                if (MainTabControl.SelectedItem == AdminTab)
+                if (MainTabControl.SelectedItem == AdminTab || MainTabControl.SelectedItem == SystemConfigTab)
                 {
                     MainTabControl.SelectedIndex = 0;
                 }
@@ -66,10 +67,12 @@ namespace BingoAdmin.UI.Views
                  if (_userSession.IsRealAdmin) 
                  {
                      AdminTab.Visibility = Visibility.Visible;
+                     SystemConfigTab.Visibility = Visibility.Visible;
                  }
                  else
                  {
                      AdminTab.Visibility = Visibility.Collapsed;
+                     SystemConfigTab.Visibility = Visibility.Collapsed;
                  }
             }
         }

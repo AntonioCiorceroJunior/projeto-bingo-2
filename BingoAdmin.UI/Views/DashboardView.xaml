@@ -112,6 +112,9 @@
             <TabItem x:Name="AdminTab" Header="Admin Users" Visibility="Collapsed">
                 <local:UsuariosView/>
             </TabItem>
+            <TabItem x:Name="SystemConfigTab" Header="⚙ Configurações" Visibility="Collapsed">
+                <local:SystemConfigView/>
+            </TabItem>
         </TabControl>
 
         <!-- Global Feed -->
